@@ -1,6 +1,7 @@
 import { Scene } from '../core/Scene';
 import { Camera } from '../components/Camera';
 import { MeshRenderer } from '../components/MeshRenderer';
+import { DirectionalLight } from '../components/DirectionalLight';
 
 export interface RendererConfig {
   antialias?: boolean;
@@ -122,12 +123,16 @@ export class Renderer {
 
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
 
+    // Find the first active directional light in the scene
+    const lightEntities = scene.findEntitiesWithComponent(DirectionalLight);
+    const light = lightEntities.length > 0 ? lightEntities[0].getComponent(DirectionalLight) || undefined : undefined;
+
     const meshRenderers = scene.findEntitiesWithComponent(MeshRenderer);
     let renderedCount = 0;
     for (const entity of meshRenderers) {
       const meshRenderer = entity.getComponent(MeshRenderer);
       if (meshRenderer && meshRenderer.enabled) {
-        meshRenderer.render(passEncoder, camera);
+        meshRenderer.render(passEncoder, camera, light);
         renderedCount++;
       }
     }

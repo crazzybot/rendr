@@ -3,13 +3,13 @@ import { Quat } from './Quat';
 
 
 /**
- * Row-major matrix class for 3D transformations. The elements are stored in a Float32Array in the following order:
- * [ m00, m01, m02, m03,
- *   m10, m11, m12, m13,
- *   m20, m21, m22, m23,
- *   m30, m31, m32, m33 ]
+ * Column-major matrix class for 3D transformations. The elements are stored in a Float32Array in the following order:
+ * [ m00, m10, m20, m30,
+ *   m01, m11, m21, m31,
+ *   m02, m12, m22, m32,
+ *   m03, m13, m23, m33 ]
  *
- * This means that the first four elements represent the first row of the matrix, the next four represent the second row, and so on.
+ * This means that the first four elements represent the first column of the matrix, the next four represent the second column, and so on.
  *
  * The class provides methods for creating common transformation matrices (translation, rotation, scale), as well as perspective and orthographic projection matrices.
  * It also includes methods for multiplying matrices, transforming vectors
@@ -61,11 +61,11 @@ export class Mat4 {
 
     for (let i = 0; i < 4; i++) {
       for (let j = 0; j < 4; j++) {
-        r[i * 4 + j] =
-          a[i * 4 + 0] * b[0 * 4 + j] +
-          a[i * 4 + 1] * b[1 * 4 + j] +
-          a[i * 4 + 2] * b[2 * 4 + j] +
-          a[i * 4 + 3] * b[3 * 4 + j];
+        r[j * 4 + i] =
+          a[0 * 4 + i] * b[j * 4 + 0] +
+          a[1 * 4 + i] * b[j * 4 + 1] +
+          a[2 * 4 + i] * b[j * 4 + 2] +
+          a[3 * 4 + i] * b[j * 4 + 3];
       }
     }
 
@@ -76,25 +76,25 @@ export class Mat4 {
     const e = this.elements;
     const x = v.x, y = v.y, z = v.z;
 
-    // For row-major matrices: M * v where v = [x, y, z, 1]
-    const w = e[12] * x + e[13] * y + e[14] * z + e[15];
+    // For column-major matrices: M * v where v = [x, y, z, 1]
+    const w = e[3] * x + e[7] * y + e[11] * z + e[15];
 
     if (w === 0) return new Vec3(0, 0, 0);
 
     return new Vec3(
-      (e[0] * x + e[1] * y + e[2] * z + e[3]) / w,
-      (e[4] * x + e[5] * y + e[6] * z + e[7]) / w,
-      (e[8] * x + e[9] * y + e[10] * z + e[11]) / w
+      (e[0] * x + e[4] * y + e[8] * z + e[12]) / w,
+      (e[1] * x + e[5] * y + e[9] * z + e[13]) / w,
+      (e[2] * x + e[6] * y + e[10] * z + e[14]) / w
     );
   }
 
   static translation(v: Vec3): Mat4 {
-    // Row-major, column-vector multiplication: translation is stored in the last column.
+    // Column-major, column-vector multiplication: translation is stored in the last column.
     return new Mat4([
-      1, 0, 0, v.x,
-      0, 1, 0, v.y,
-      0, 0, 1, v.z,
-      0, 0, 0, 1
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      v.x, v.y, v.z, 1
     ]);
   }
 
@@ -103,8 +103,8 @@ export class Mat4 {
     const s = Math.sin(angle);
     return new Mat4([
       1, 0, 0, 0,
-      0, c, -s, 0,
-      0, s, c, 0,
+      0, c, s, 0,
+      0, -s, c, 0,
       0, 0, 0, 1
     ]);
   }
@@ -113,9 +113,9 @@ export class Mat4 {
     const c = Math.cos(angle);
     const s = Math.sin(angle);
     return new Mat4([
-      c, 0, s, 0,
+      c, 0, -s, 0,
       0, 1, 0, 0,
-      -s, 0, c, 0,
+      s, 0, c, 0,
       0, 0, 0, 1
     ]);
   }
@@ -124,8 +124,8 @@ export class Mat4 {
     const c = Math.cos(angle);
     const s = Math.sin(angle);
     return new Mat4([
-      c, -s, 0, 0,
-      s, c, 0, 0,
+      c, s, 0, 0,
+      -s, c, 0, 0,
       0, 0, 1, 0,
       0, 0, 0, 1
     ]);
@@ -148,12 +148,13 @@ export class Mat4 {
     const wx = w * x2, wy = w * y2, wz = w * z2;
     const sx = scale.x, sy = scale.y, sz = scale.z;
 
-    // Translation stored in the last column for column-vector multiplication.
+    // Column-major layout for right-handed coordinate system
+    // Columns represent transformed basis vectors (X, Y, Z axes)
     return new Mat4([
-      (1 - (yy + zz)) * sx, (xy - wz) * sy, (xz + wy) * sz, translation.x,
-      (xy + wz) * sx, (1 - (xx + zz)) * sy, (yz + wx) * sz, translation.y,
-      (xz - wy) * sx, (yz - wx) * sy, (1 - (xx + yy)) * sz, translation.z,
-      0, 0, 0, 1
+      (1 - (yy + zz)) * sx, (xy + wz) * sx, (xz - wy) * sx, 0,
+      (xy - wz) * sy, (1 - (xx + zz)) * sy, (yz + wx) * sy, 0,
+      (xz + wy) * sz, (yz - wx) * sz, (1 - (xx + yy)) * sz, 0,
+      translation.x, translation.y, translation.z, 1
     ]);
   }
 
@@ -161,11 +162,14 @@ export class Mat4 {
     const f = 1.0 / Math.tan(fov / 2);
     const rangeInv = 1.0 / (far - near);
 
+    // WebGPU perspective matrix for depth range [0, 1]
+    // Column-major layout: [col0, col1, col2, col3]
+    // Right-handed coords: camera looks down -Z, z_view < 0 for visible objects
     return new Mat4([
-      f / aspect, 0, 0, 0,
-      0, f, 0, 0,
-      0, 0, -(far + near) * rangeInv, -2 * far * near * rangeInv,
-      0, 0, -1, 0
+      f / aspect, 0, 0, 0,                  // Column 0: X scale
+      0, f, 0, 0,                            // Column 1: Y scale
+      0, 0, -far * rangeInv, -1,             // Column 2: Z transform + W=-z
+      0, 0, -near * far * rangeInv, 0        // Column 3: translation
     ]);
   }
 
@@ -176,10 +180,10 @@ export class Mat4 {
 
     // Translation stored in the last column for column-vector multiplication.
     return new Mat4([
-      -2 * lr, 0, 0, (left + right) * lr,
-      0, -2 * bt, 0, (top + bottom) * bt,
-      0, 0, 2 * nf, (far + near) * nf,
-      0, 0, 0, 1
+      -2 * lr, 0, 0, 0,
+      0, -2 * bt, 0, 0,
+      0, 0, 2 * nf, 0,
+      (left + right) * lr, (top + bottom) * bt, (far + near) * nf, 1
     ]);
   }
 
@@ -188,64 +192,68 @@ export class Mat4 {
     const x = up.cross(z).normalize();
     const y = z.cross(x).normalize();
 
-    // Row-major, column-vector multiplication: basis vectors are rows; translation is in last column.
+    // Column-major, column-vector multiplication: basis vectors are columns; translation is in last column.
     return new Mat4([
-      x.x, x.y, x.z, -x.dot(eye),
-      y.x, y.y, y.z, -y.dot(eye),
-      z.x, z.y, z.z, -z.dot(eye),
-      0, 0, 0, 1
+      x.x, y.x, z.x, 0,
+      x.y, y.y, z.y, 0,
+      x.z, y.z, z.z, 0,
+      -x.dot(eye), -y.dot(eye), -z.dot(eye), 1
     ]);
   }
 
   invert(): Mat4 | null {
     const m = this.elements;
-    const result = new Mat4();
-    const r = result.elements;
+    // Check if it's affine (last row is [0,0,0,1])
+    if (Math.abs(m[3]) > 1e-10 || Math.abs(m[7]) > 1e-10 || Math.abs(m[11]) > 1e-10 || Math.abs(m[15] - 1) > 1e-10) {
+      // Not affine, return null for now
+      return null;
+    }
 
-    const a00 = m[0], a01 = m[1], a02 = m[2], a03 = m[3];
-    const a10 = m[4], a11 = m[5], a12 = m[6], a13 = m[7];
-    const a20 = m[8], a21 = m[9], a22 = m[10], a23 = m[11];
-    const a30 = m[12], a31 = m[13], a32 = m[14], a33 = m[15];
+    // Extract 3x3 matrix R
+    const r00 = m[0], r01 = m[4], r02 = m[8];
+    const r10 = m[1], r11 = m[5], r12 = m[9];
+    const r20 = m[2], r21 = m[6], r22 = m[10];
 
-    const b00 = a00 * a11 - a01 * a10;
-    const b01 = a00 * a12 - a02 * a10;
-    const b02 = a00 * a13 - a03 * a10;
-    const b03 = a01 * a12 - a02 * a11;
-    const b04 = a01 * a13 - a03 * a11;
-    const b05 = a02 * a13 - a03 * a12;
-    const b06 = a20 * a31 - a21 * a30;
-    const b07 = a20 * a32 - a22 * a30;
-    const b08 = a20 * a33 - a23 * a30;
-    const b09 = a21 * a32 - a22 * a31;
-    const b10 = a21 * a33 - a23 * a31;
-    const b11 = a22 * a33 - a23 * a32;
+    // Translation t
+    const tx = m[12], ty = m[13], tz = m[14];
 
-    let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+    // Compute determinant of R
+    const det = r00 * (r11 * r22 - r12 * r21) -
+                r01 * (r10 * r22 - r12 * r20) +
+                r02 * (r10 * r21 - r11 * r20);
 
     if (Math.abs(det) < 1e-10) {
       return null;
     }
 
-    det = 1.0 / det;
+    const invDet = 1.0 / det;
 
-    r[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det;
-    r[1] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
-    r[2] = (a31 * b05 - a32 * b04 + a33 * b03) * det;
-    r[3] = (a22 * b04 - a21 * b05 - a23 * b03) * det;
-    r[4] = (a12 * b08 - a10 * b11 - a13 * b07) * det;
-    r[5] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
-    r[6] = (a32 * b02 - a30 * b05 - a33 * b01) * det;
-    r[7] = (a20 * b05 - a22 * b02 + a23 * b01) * det;
-    r[8] = (a10 * b10 - a11 * b08 + a13 * b06) * det;
-    r[9] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
-    r[10] = (a30 * b04 - a31 * b02 + a33 * b00) * det;
-    r[11] = (a21 * b02 - a20 * b04 - a23 * b00) * det;
-    r[12] = (a11 * b07 - a10 * b09 - a12 * b06) * det;
-    r[13] = (a00 * b09 - a01 * b07 + a02 * b06) * det;
-    r[14] = (a31 * b01 - a30 * b03 - a32 * b00) * det;
-    r[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
+    // Compute R^-1 using adjugate
+    const invR00 = (r11 * r22 - r12 * r21) * invDet;
+    const invR01 = (r02 * r21 - r01 * r22) * invDet;
+    const invR02 = (r01 * r12 - r02 * r11) * invDet;
+    const invR10 = (r12 * r20 - r10 * r22) * invDet;
+    const invR11 = (r00 * r22 - r02 * r20) * invDet;
+    const invR12 = (r02 * r10 - r00 * r12) * invDet;
+    const invR20 = (r10 * r21 - r11 * r20) * invDet;
+    const invR21 = (r01 * r20 - r00 * r21) * invDet;
+    const invR22 = (r00 * r11 - r01 * r10) * invDet;
 
-    return result;
+    // -R^-1 * t
+    let ntx = -(invR00 * tx + invR01 * ty + invR02 * tz);
+    let nty = -(invR10 * tx + invR11 * ty + invR12 * tz);
+    let ntz = -(invR20 * tx + invR21 * ty + invR22 * tz);
+
+    ntx = ntx === 0 ? 0 : ntx;
+    nty = nty === 0 ? 0 : nty;
+    ntz = ntz === 0 ? 0 : ntz;
+
+    return new Mat4([
+      invR00, invR10, invR20, 0,
+      invR01, invR11, invR21, 0,
+      invR02, invR12, invR22, 0,
+      ntx, nty, ntz, 1
+    ]);
   }
 
   transpose(): Mat4 {

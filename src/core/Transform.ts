@@ -97,23 +97,7 @@ export class Transform extends Component {
   }
 
   lookAt(target: Vec3, up: Vec3 = Vec3.up()): void {
-    // Compute forward vector (from position towards target)
-    const forward = target.sub(this._position).normalize();
-    
-    // Compute right vector
-    const right = up.cross(forward).normalize();
-    
-    // Recompute up to ensure orthogonality
-    const newUp = forward.cross(right).normalize();
-
-    // Build rotation matrix (converts from world to local space)
-    // In column-major: [right | up | -forward | 0]
-    const m = new Mat4([
-      right.x, newUp.x, -forward.x, 0,
-      right.y, newUp.y, -forward.y, 0,
-      right.z, newUp.z, -forward.z, 0,
-      0, 0, 0, 1
-    ]);
+    const m = Mat4.lookAt(this._position, target, up);
 
     // Convert rotation matrix to quaternion using trace method
     const trace = m.elements[0] + m.elements[5] + m.elements[10];
@@ -155,6 +139,10 @@ export class Transform extends Component {
     this.markDirty();
   }
 
+  /**
+   * Gets the forward direction of the transform.
+   * @returns The forward direction as a vector.
+   */
   getForward(): Vec3 {
     const matrix = this.getWorldMatrix();
     return new Vec3(matrix.elements[8], matrix.elements[9], matrix.elements[10]).normalize();

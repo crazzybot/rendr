@@ -5,23 +5,47 @@ export class Geometry {
     const s = size / 2;
 
     const positions = new Float32Array([
-      -s, -s, -s,  s, -s, -s,  s,  s, -s, -s,  s, -s,
+      // front face
       -s, -s,  s,  s, -s,  s,  s,  s,  s, -s,  s,  s,
-      -s, -s, -s, -s,  s, -s, -s,  s,  s, -s, -s,  s,
-       s, -s, -s,  s,  s, -s,  s,  s,  s,  s, -s,  s,
-      -s, -s, -s, -s, -s,  s,  s, -s,  s,  s, -s, -s,
-      -s,  s, -s, -s,  s,  s,  s,  s,  s,  s,  s, -s
+      // back face
+      -s, -s, -s, -s,  s, -s,  s,  s, -s,  s, -s, -s,
+      // left face
+      -s, -s, -s, -s, -s,  s, -s,  s,  s, -s,  s, -s,
+      // right face
+       s, -s,  s,  s, -s, -s,  s,  s, -s,  s,  s,  s,
+      // top face
+      -s,  s,  s,  s,  s,  s,  s,  s, -s, -s,  s, -s,
+      // bottom face
+      -s, -s, -s,  s, -s, -s,  s, -s,  s, -s, -s,  s
     ]);
 
     const normals = new Float32Array([
-       0,  0, -1,  0,  0, -1,  0,  0, -1,  0,  0, -1,
+      // front face
        0,  0,  1,  0,  0,  1,  0,  0,  1,  0,  0,  1,
+       // back face
+       0,  0, -1,  0,  0, -1,  0,  0, -1,  0,  0, -1,       
+        // left face
       -1,  0,  0, -1,  0,  0, -1,  0,  0, -1,  0,  0,
+        // right face
        1,  0,  0,  1,  0,  0,  1,  0,  0,  1,  0,  0,
+        // top face
+       0,  1,  0,  0,  1,  0,  0,  1,  0,  0,  1,  0,
+        // bottom face
        0, -1,  0,  0, -1,  0,  0, -1,  0,  0, -1,  0,
-       0,  1,  0,  0,  1,  0,  0,  1,  0,  0,  1,  0
+       
     ]);
 
+    /**
+     * UVs are optional, but can be useful for texturing the cube. 
+     * Here we assign UVs for each face. Each face gets a full 0-1 UV range, 
+     * which allows for simple texturing. If you want to use a texture atlas, 
+     * you would adjust these UVs accordingly. For a cube, we have 6 faces, and each 
+     * face has 4 vertices, so we need 24 UV coordinates.
+     * The UVs are arranged in a way that each face can be textured independently.
+     * If you don't need UVs, you can simply omit this array and the Mesh will work without it.
+     * The same applies to normals; if you don't need them, you can omit the normals array.
+     * This design allows for flexibility in how you use the Mesh class, depending on your needs.
+     */
     const uvs = new Float32Array([
       0, 0, 1, 0, 1, 1, 0, 1,
       0, 0, 1, 0, 1, 1, 0, 1,
@@ -32,7 +56,7 @@ export class Geometry {
     ]);
 
     const indices = new Uint16Array([
-      0, 1, 2, 0, 2, 3,
+      0, 1, 2, 0, 2, 3, 
       4, 5, 6, 4, 6, 7,
       8, 9, 10, 8, 10, 11,
       12, 13, 14, 12, 14, 15,
@@ -79,8 +103,9 @@ export class Geometry {
         const a = ring * (segments + 1) + segment;
         const b = a + segments + 1;
 
-        indices.push(a, b, a + 1);
-        indices.push(b, b + 1, a + 1);
+        // Counter-clockwise winding for WebGPU
+        indices.push(a, a + 1, b);
+        indices.push(b, a + 1, b + 1);
       }
     }
 
@@ -122,8 +147,9 @@ export class Geometry {
         const a = y * (segmentsX + 1) + x;
         const b = a + segmentsX + 1;
 
+        // Counter-clockwise winding when viewed from above (normal points up)
         indices.push(a, b, a + 1);
-        indices.push(b, b + 1, a + 1);
+        indices.push(a + 1, b, b + 1);
       }
     }
 
@@ -143,6 +169,7 @@ export class Geometry {
 
     const halfHeight = height / 2;
 
+    // Side surface
     for (let i = 0; i <= segments; i++) {
       const theta = (i / segments) * Math.PI * 2;
       const cosTheta = Math.cos(theta);
@@ -157,14 +184,58 @@ export class Geometry {
       uvs.push(i / segments, 1);
     }
 
+    // Side surface indices
     for (let i = 0; i < segments; i++) {
       const a = i * 2;
       const b = a + 1;
       const c = a + 2;
       const d = a + 3;
 
-      indices.push(a, c, b);
-      indices.push(b, c, d);
+      // Counter-clockwise winding when viewed from outside the cylinder
+      indices.push(a, b, c);
+      indices.push(c, b, d);
+    }
+
+    // Bottom cap (y = -halfHeight, normal pointing down)
+    const bottomCenterIndex = positions.length / 3;
+    positions.push(0, -halfHeight, 0);
+    normals.push(0, -1, 0);
+    uvs.push(0.5, 0.5);
+
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      const cosTheta = Math.cos(theta);
+      const sinTheta = Math.sin(theta);
+
+      positions.push(cosTheta * radius, -halfHeight, sinTheta * radius);
+      normals.push(0, -1, 0);
+      uvs.push(cosTheta * 0.5 + 0.5, sinTheta * 0.5 + 0.5);
+    }
+
+    for (let i = 0; i < segments; i++) {
+      // Counter-clockwise when viewed from below (looking up at bottom cap)
+      indices.push(bottomCenterIndex, bottomCenterIndex + i + 1, bottomCenterIndex + i + 2);
+    }
+
+    // Top cap (y = halfHeight, normal pointing up)
+    const topCenterIndex = positions.length / 3;
+    positions.push(0, halfHeight, 0);
+    normals.push(0, 1, 0);
+    uvs.push(0.5, 0.5);
+
+    for (let i = 0; i <= segments; i++) {
+      const theta = (i / segments) * Math.PI * 2;
+      const cosTheta = Math.cos(theta);
+      const sinTheta = Math.sin(theta);
+
+      positions.push(cosTheta * radius, halfHeight, sinTheta * radius);
+      normals.push(0, 1, 0);
+      uvs.push(cosTheta * 0.5 + 0.5, sinTheta * 0.5 + 0.5);
+    }
+
+    for (let i = 0; i < segments; i++) {
+      // Counter-clockwise when viewed from above (looking down at top cap)
+      indices.push(topCenterIndex, topCenterIndex + i + 2, topCenterIndex + i + 1);
     }
 
     return new Mesh({

@@ -69,9 +69,16 @@ export const BasicShader: ShaderSource = {
 
       let worldPos = uniforms.modelMatrix * vec4<f32>(input.position, 1.0);
       output.position = uniforms.viewProjectionMatrix * worldPos;
-      // output.position = worldPos;
       output.worldPosition = worldPos.xyz;
-      output.normal = (uniforms.modelMatrix * vec4<f32>(input.normal, 0.0)).xyz;
+
+      // Transform normal using the upper-left 3x3 of the model matrix
+      // For uniform scaling and rotation, this is sufficient
+      let normalMatrix = mat3x3<f32>(
+        uniforms.modelMatrix[0].xyz,
+        uniforms.modelMatrix[1].xyz,
+        uniforms.modelMatrix[2].xyz
+      );
+      output.normal = normalize(normalMatrix * input.normal);
       output.uv = input.uv;
 
       return output;
@@ -86,7 +93,16 @@ export const BasicShader: ShaderSource = {
       shininess: f32,
     };
 
+    struct LightUniforms {
+      direction: vec3<f32>,
+      _padding1: f32,
+      color: vec4<f32>,
+      cameraPosition: vec3<f32>,
+      _padding2: f32,
+    };
+
     @group(0) @binding(1) var<uniform> material: MaterialUniforms;
+    @group(0) @binding(2) var<uniform> light: LightUniforms;
 
     struct FragmentInput {
       @location(0) normal: vec3<f32>,
@@ -96,8 +112,24 @@ export const BasicShader: ShaderSource = {
 
     @fragment
     fn fragmentMain(input: FragmentInput) -> @location(0) vec4<f32> {
-      // Simple unlit color for now
-      return material.color;
+      let normal = normalize(input.normal);
+      let lightDir = normalize(-light.direction);
+
+      // Ambient
+      let ambient = material.ambient * material.color.rgb * light.color.rgb;
+
+      // Diffuse
+      let diff = max(dot(normal, lightDir), 0.0);
+      let diffuse = material.diffuse * diff * material.color.rgb * light.color.rgb;
+
+      // Specular
+      let viewDir = normalize(light.cameraPosition - input.worldPosition);
+      let reflectDir = reflect(-lightDir, normal);
+      let spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+      let specular = material.specular * spec * light.color.rgb;
+
+      let finalColor = ambient + diffuse + specular;
+      return vec4<f32>(finalColor, material.color.a);
     }
   `
 };

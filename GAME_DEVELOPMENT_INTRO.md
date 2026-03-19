@@ -1205,7 +1205,7 @@ These fundamentals apply whether you're building a WebGPU game, using Unity, Unr
 
 ## Next Steps
 
-1. **Study the WebGPU Game Framework**: Review the USER_GUIDE.md to see these concepts applied
+1. **Study Rendr**: Review the USER_GUIDE.md to see these concepts applied
 2. **Build Small Projects**: Create simple games to reinforce concepts
 3. **Study Other Engines**: Compare frameworks to deepen understanding
 4. **Join Communities**: Learn from other developers and share knowledge

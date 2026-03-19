@@ -1,4 +1,4 @@
-# WebGPU Game Framework
+# Rendr
 
 A robust, modern 3D game framework built on WebGPU for creating high-performance browser-based games.
 
@@ -49,7 +49,7 @@ import {
   Material,
   Vec3,
   Vec4
-} from 'webgpu-game-framework';
+} from 'rendr';
 
 // Create engine
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
@@ -160,7 +160,7 @@ const cylinder = Geometry.createCylinder(radius, height, segments);
 Create custom materials with different shaders:
 
 ```typescript
-import { Material, BasicShader, UnlitShader, Vec4 } from 'webgpu-game-framework';
+import { Material, BasicShader, UnlitShader, Vec4 } from 'rendr';
 
 // Basic lit material
 const material = new Material(BasicShader, {
@@ -244,7 +244,7 @@ const worldPos = camera.screenToWorld(screenX, screenY, depth);
 Centralized resource management:
 
 ```typescript
-import { ResourceManager } from 'webgpu-game-framework';
+import { ResourceManager } from 'rendr';
 
 const resources = ResourceManager.getInstance();
 
@@ -278,7 +278,7 @@ src/
 Create custom components by extending the Component class:
 
 ```typescript
-import { Component } from 'webgpu-game-framework';
+import { Component } from 'rendr';
 
 export class RotateComponent extends Component {
   public speed: number = 1;

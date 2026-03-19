@@ -12,7 +12,8 @@ import {
   Quat,
   UnlitShader,
   MouseButton,
-  Component
+  Component,
+  DirectionalLight
 } from '../src/index';
 
 class RotateComponent extends Component {
@@ -39,10 +40,21 @@ class CameraController extends Component {
   private lookSpeed: number = 0.002;
   private pitch: number = 0;
   private yaw: number = 0;
+  private initialized: boolean = false;
 
   constructor(engine: Engine) {
     super();
     this.engine = engine;
+  }
+
+  onStart(): void {
+    // Initialize pitch and yaw from the current camera rotation
+    if (this.entity && !this.initialized) {
+      const euler = this.entity.transform.rotation.toEuler();
+      this.pitch = euler.x;
+      this.yaw = euler.y;
+      this.initialized = true;
+    }
   }
 
   onUpdate(deltaTime: number): void {
@@ -72,9 +84,10 @@ class CameraController extends Component {
       movement.y -= 1;
     }
 
+    const entity = this.entity!;
     if (movement.lengthSquared() > 0) {
-      const forward = this.entity!.transform.getForward().mul(-1);
-      const right = this.entity!.transform.getRight();
+      const forward = entity.transform.getForward().mul(-1);
+      const right = entity.transform.getRight();
       const up = Vec3.up();
 
       const moveDirection = forward.mul(movement.z)
@@ -83,7 +96,7 @@ class CameraController extends Component {
         .normalize()
         .mul(this.moveSpeed * deltaTime);
 
-      this.entity!.transform.translate(moveDirection);
+      entity.transform.translate(moveDirection);
     }
 
     if (input.isPointerLocked()) {
@@ -95,7 +108,7 @@ class CameraController extends Component {
       this.pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.pitch));
 
       const rotation = Quat.fromEuler(this.pitch, this.yaw, 0);
-      this.entity!.transform.rotation = rotation;
+      entity.transform.rotation = rotation;
     }
 
     if (input.isKeyDown('Escape')) {
@@ -140,13 +153,19 @@ async function main() {
     const camera = new Camera();
 
     camera.setPerspective(Math.PI / 4, window.innerWidth / window.innerHeight, 0.1, 1000);
-    // camera.projectionType === ProjectionType.Orthographic
+    // camera.setOrthographic(-10, 10, -10, 10, 0.1, 1000);
     cameraEntity.addComponent(camera);
-    cameraEntity.transform.position = new Vec3(0, 2, 10);
+    cameraEntity.transform.position = new Vec3(0, 2, 4);
     cameraEntity.transform.lookAt(Vec3.zero(), Vec3.up());
 
     const cameraController = new CameraController(engine);
     cameraEntity.addComponent(cameraController);
+
+    // Create a directional light
+    const lightEntity = scene.createEntity('DirectionalLight');
+    const dirLight = new DirectionalLight(new Vec4(1, 1, 1, 1), 1.0);
+    lightEntity.addComponent(dirLight);
+    lightEntity.transform.rotation = Quat.fromEuler(-Math.PI / 4, Math.PI / 4, 0);
 
     const cube1 = scene.createEntity('Cube1');
     const cubeMesh = Geometry.createCube(1);
@@ -195,7 +214,7 @@ async function main() {
     planeRenderer.initialize(device, format);
 
     const cylinder = scene.createEntity('Cylinder');
-    const cylinderMesh = Geometry.createCylinder(0.5, 2, 32);
+    const cylinderMesh = Geometry.createCylinder(0.5, 1, 32);
     const cylinderMaterial = new Material(undefined, {
       color: new Vec4(0.3, 0.3, 1, 1),
       ambient: 0.3,
@@ -236,7 +255,7 @@ async function main() {
     });
     engine.start();
 
-    console.log('WebGPU Game Framework initialized successfully!');
+    console.log('Rendr initialized successfully!');
 
   } catch (error) {
     console.error('Error initializing engine:', error);

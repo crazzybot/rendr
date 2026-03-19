@@ -21,6 +21,7 @@ export class Material {
   private bindGroup: GPUBindGroup | null = null;
   private uniformBuffer: GPUBuffer | null = null;
   private materialBuffer: GPUBuffer | null = null;
+  private lightBuffer: GPUBuffer | null = null;
 
   constructor(shaderSource?: ShaderSource, properties?: MaterialProperties) {
     this.shader = new Shader(shaderSource || BasicShader);
@@ -50,6 +51,11 @@ export class Material {
           binding: 1,
           visibility: GPUShaderStage.FRAGMENT,
           buffer: { type: 'uniform' }
+        },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.FRAGMENT,
+          buffer: { type: 'uniform' }
         }
       ]
     });
@@ -68,6 +74,11 @@ export class Material {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     });
 
+    this.lightBuffer = device.createBuffer({
+      size: 48,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    });
+
     this.updateMaterialBuffer(device);
 
     this.bindGroup = device.createBindGroup({
@@ -80,6 +91,10 @@ export class Material {
         {
           binding: 1,
           resource: { buffer: this.materialBuffer }
+        },
+        {
+          binding: 2,
+          resource: { buffer: this.lightBuffer }
         }
       ]
     });
@@ -130,6 +145,22 @@ export class Material {
     device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
   }
 
+  updateLightUniforms(
+    device: GPUDevice,
+    lightDirection: Float32Array,
+    lightColor: Float32Array,
+    cameraPosition: Float32Array
+  ): void {
+    if (!this.lightBuffer) return;
+
+    const lightData = new Float32Array(12);
+    lightData.set(lightDirection, 0);
+    lightData.set(lightColor, 4);
+    lightData.set(cameraPosition, 8);
+
+    device.queue.writeBuffer(this.lightBuffer, 0, lightData);
+  }
+
   setColor(color: Vec4): void {
     this.color = color;
   }
@@ -153,6 +184,11 @@ export class Material {
     if (this.materialBuffer) {
       this.materialBuffer.destroy();
       this.materialBuffer = null;
+    }
+
+    if (this.lightBuffer) {
+      this.lightBuffer.destroy();
+      this.lightBuffer = null;
     }
 
     this.pipeline = null;

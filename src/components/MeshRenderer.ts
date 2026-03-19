@@ -2,6 +2,8 @@ import { Component } from '../core/Component';
 import { Mesh } from '../rendering/Mesh';
 import { Material } from '../rendering/Material';
 import { Camera } from './Camera';
+import { DirectionalLight } from './DirectionalLight';
+import { Vec3 } from '../math/Vec3';
 
 export class MeshRenderer extends Component {
   public mesh: Mesh | null = null;
@@ -34,7 +36,7 @@ export class MeshRenderer extends Component {
     this.initialized = true;
   }
 
-  render(passEncoder: GPURenderPassEncoder, camera: Camera): void {
+  render(passEncoder: GPURenderPassEncoder, camera: Camera, light?: DirectionalLight): void {
     if (!this.initialized || !this.mesh || !this.material || !this.entity || !this.device) {
       if (!this.renderLoggedOnce) {
         console.log('MeshRenderer render early return:', {
@@ -71,9 +73,23 @@ export class MeshRenderer extends Component {
     // Transpose in JS before sending to GPU
     this.material.updateUniforms(
       this.device,
-      modelMatrix.transpose().elements,
-      viewProjectionMatrix.transpose().elements
+      modelMatrix.elements,
+      viewProjectionMatrix.elements
     );
+
+    // Update light uniforms if a light is provided
+    if (light) {
+      const lightDir = light.getDirection();
+      const lightColor = light.getFinalColor();
+      const cameraPos = camera.entity?.transform.position || new Vec3(0, 0, 0);
+
+      this.material.updateLightUniforms(
+        this.device,
+        new Float32Array([lightDir.x, lightDir.y, lightDir.z]),
+        new Float32Array([lightColor.x, lightColor.y, lightColor.z, lightColor.w]),
+        new Float32Array([cameraPos.x, cameraPos.y, cameraPos.z])
+      );
+    }
 
     passEncoder.setPipeline(pipeline);
     passEncoder.setBindGroup(0, bindGroup);

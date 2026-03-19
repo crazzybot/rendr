@@ -1,6 +1,6 @@
-# WebGPU Game Framework - User Guide
+# Rendr - User Guide
 
-A comprehensive guide to building 3D games for the web using the WebGPU Game Framework.
+A comprehensive guide to building 3D games for the web using Rendr.
 
 ## Table of Contents
 
@@ -22,7 +22,7 @@ A comprehensive guide to building 3D games for the web using the WebGPU Game Fra
 
 ## Introduction
 
-The WebGPU Game Framework is a modern, TypeScript-based 3D game framework designed for browsers. It leverages the cutting-edge WebGPU API for high-performance graphics rendering while providing a straightforward Entity Component System (ECS) architecture for managing game objects.
+Rendr is a modern, TypeScript-based 3D game framework designed for browsers. It leverages the cutting-edge WebGPU API for high-performance graphics rendering while providing a straightforward Entity Component System (ECS) architecture for managing game objects.
 
 ### Key Features
 
