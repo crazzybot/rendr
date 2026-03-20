@@ -188,11 +188,13 @@ export class Mat4 {
   }
 
   static lookAt(eye: Vec3, target: Vec3, up: Vec3): Mat4 {
-    const z = eye.sub(target).normalize();
-    const x = up.cross(z).normalize();
-    const y = z.cross(x).normalize();
+    // Right-handed coordinate system: camera looks down -Z
+    const z = eye.sub(target).normalize();  // Forward (camera looks opposite to this)
+    const x = up.cross(z).normalize();       // Right
+    const y = z.cross(x).normalize();        // Up (orthogonal to forward and right)
 
-    // Column-major, column-vector multiplication: basis vectors are columns; translation is in last column.
+    // View matrix: inverse of camera transform
+    // Column-major layout: columns are the basis vectors
     return new Mat4([
       x.x, y.x, z.x, 0,
       x.y, y.y, z.y, 0,

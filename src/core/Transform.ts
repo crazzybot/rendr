@@ -97,7 +97,20 @@ export class Transform extends Component {
   }
 
   lookAt(target: Vec3, up: Vec3 = Vec3.up()): void {
-    const m = Mat4.lookAt(this._position, target, up);
+    // Build camera orientation matrix (not view matrix)
+    // Camera looks toward target, so forward = target - position
+    const forward = target.sub(this._position).normalize();
+    const right = forward.cross(up).normalize();
+    const actualUp = right.cross(forward).normalize();
+
+    // Create rotation matrix: column-major, columns are basis vectors
+    // For camera: right = +X, up = +Y, forward = -Z (camera looks down -Z)
+    const m = new Mat4([
+      right.x, actualUp.x, -forward.x, 0,
+      right.y, actualUp.y, -forward.y, 0,
+      right.z, actualUp.z, -forward.z, 0,
+      0, 0, 0, 1
+    ]);
 
     // Convert rotation matrix to quaternion using trace method
     const trace = m.elements[0] + m.elements[5] + m.elements[10];

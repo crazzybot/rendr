@@ -40,21 +40,20 @@ class CameraController extends Component {
   private lookSpeed: number = 0.002;
   private pitch: number = 0;
   private yaw: number = 0;
-  private initialized: boolean = false;
 
   constructor(engine: Engine) {
     super();
     this.engine = engine;
   }
 
-  onStart(): void {
+  onAttach(): void {
     // Initialize pitch and yaw from the current camera rotation
-    if (this.entity && !this.initialized) {
+    if (this.entity) {
       const euler = this.entity.transform.rotation.toEuler();
       this.pitch = euler.x;
       this.yaw = euler.y;
-      this.initialized = true;
     }
+    console.log('CameraController attached. Initial pitch:', this.pitch, 'Initial yaw:', this.yaw);
   }
 
   onUpdate(deltaTime: number): void {
@@ -156,7 +155,9 @@ async function main() {
     // camera.setOrthographic(-10, 10, -10, 10, 0.1, 1000);
     cameraEntity.addComponent(camera);
     cameraEntity.transform.position = new Vec3(0, 2, 4);
-    cameraEntity.transform.lookAt(Vec3.zero(), Vec3.up());
+    // cameraEntity.transform.lookAt(Vec3.zero(), Vec3.up());
+    cameraEntity.transform.lookAt(new Vec3(0, 4, 0), Vec3.up());
+
 
     const cameraController = new CameraController(engine);
     cameraEntity.addComponent(cameraController);
