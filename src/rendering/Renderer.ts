@@ -16,8 +16,6 @@ export class Renderer {
   private format: GPUTextureFormat = 'bgra8unorm';
   private depthTexture: GPUTexture | null = null;
   private config: RendererConfig;
-  private renderLoggedOnce: boolean = false;
-
   constructor(canvas: HTMLCanvasElement, config: RendererConfig = {}) {
     this.canvas = canvas;
     this.config = config;
@@ -86,11 +84,6 @@ export class Renderer {
       return;
     }
 
-    if (!this.renderLoggedOnce) {
-      console.log('Render function called');
-      this.renderLoggedOnce = true;
-    }
-
     const cameraEntities = scene.findEntitiesWithComponent(Camera);
     if (cameraEntities.length === 0) {
       console.warn('No camera found in scene');
@@ -128,12 +121,13 @@ export class Renderer {
     const light = lightEntities.length > 0 ? lightEntities[0].getComponent(DirectionalLight) || undefined : undefined;
 
     const meshRenderers = scene.findEntitiesWithComponent(MeshRenderer);
-    let renderedCount = 0;
     for (const entity of meshRenderers) {
       const meshRenderer = entity.getComponent(MeshRenderer);
       if (meshRenderer && meshRenderer.enabled) {
+        if (!meshRenderer.isInitialized()) {
+          meshRenderer.initialize(this.device, this.format);
+        }
         meshRenderer.render(passEncoder, camera, light);
-        renderedCount++;
       }
     }
 
@@ -142,7 +136,7 @@ export class Renderer {
     this.device.queue.submit([commandEncoder.finish()]);
   }
 
-  resize(width: number, height: number): void {
+  resize(_width: number, _height: number): void {
     this.createDepthTexture();
   }
 

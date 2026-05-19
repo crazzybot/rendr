@@ -231,6 +231,23 @@ async function main() {
     const rotateComp3 = new RotateComponent(new Vec3(0.5, 1, 0));
     cylinder.addComponent(rotateComp3);
 
+    const car = scene.createEntity('Car');
+    const carMesh = Geometry.createCar(0.5);
+    const carMaterial = new Material(undefined, {
+      color: new Vec4(0.8, 0.2, 0.2, 1),
+      ambient: 0.3,
+      diffuse: 0.7
+    });
+    const carRenderer = new MeshRenderer();
+    carRenderer.setMesh(carMesh);
+    carRenderer.setMaterial(carMaterial);
+    car.addComponent(carRenderer);
+    car.transform.position = new Vec3(0, 0, 3);
+    carRenderer.initialize(device, format);
+
+    const rotateComp4 = new RotateComponent(new Vec3(0, 1, 0));
+    car.addComponent(rotateComp4);
+
     window.addEventListener('resize', () => {
       const width = window.innerWidth;
       const height = window.innerHeight;
@@ -242,18 +259,18 @@ async function main() {
     console.log('Camera found:', scene.findEntitiesWithComponent(Camera).length);
     console.log('MeshRenderers found:', scene.findEntitiesWithComponent(MeshRenderer).length);
 
-    const meshRenderers = scene.findEntitiesWithComponent(MeshRenderer);
-    meshRenderers.forEach((entity, index) => {
-      const renderer = entity.getComponent(MeshRenderer);
-      console.log(`MeshRenderer ${index} (${entity.name}):`, {
-        hasMesh: !!renderer?.mesh,
-        hasMaterial: !!renderer?.material,
-        enabled: renderer?.enabled,
-        hasVertexBuffer: !!renderer?.mesh?.vertexBuffer,
-        hasIndexBuffer: !!renderer?.mesh?.indexBuffer,
-        indexCount: renderer?.mesh?.indexCount
-      });
-    });
+    // const meshRenderers = scene.findEntitiesWithComponent(MeshRenderer);
+    // meshRenderers.forEach((entity, index) => {
+    //   const renderer = entity.getComponent(MeshRenderer);
+    //   console.log(`MeshRenderer ${index} (${entity.name}):`, {
+    //     hasMesh: !!renderer?.mesh,
+    //     hasMaterial: !!renderer?.material,
+    //     enabled: renderer?.enabled,
+    //     hasVertexBuffer: !!renderer?.mesh?.vertexBuffer,
+    //     hasIndexBuffer: !!renderer?.mesh?.indexBuffer,
+    //     indexCount: renderer?.mesh?.indexCount
+    //   });
+    // });
     engine.start();
 
     console.log('Rendr initialized successfully!');

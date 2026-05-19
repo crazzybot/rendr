@@ -39,6 +39,10 @@ export class Transform extends Component {
     this.markDirty();
   }
 
+  get isDirty(): boolean {
+    return this._dirty;
+  }
+
   private markDirty(): void {
     this._dirty = true;
     for (const child of this.children) {

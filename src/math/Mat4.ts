@@ -204,57 +204,40 @@ export class Mat4 {
   }
 
   invert(): Mat4 | null {
-    const m = this.elements;
-    // Check if it's affine (last row is [0,0,0,1])
-    if (Math.abs(m[3]) > 1e-10 || Math.abs(m[7]) > 1e-10 || Math.abs(m[11]) > 1e-10 || Math.abs(m[15] - 1) > 1e-10) {
-      // Not affine, return null for now
-      return null;
-    }
+    const e = this.elements;
 
-    // Extract 3x3 matrix R
-    const r00 = m[0], r01 = m[4], r02 = m[8];
-    const r10 = m[1], r11 = m[5], r12 = m[9];
-    const r20 = m[2], r21 = m[6], r22 = m[10];
+    // Cofactors for row 0 (used for det and result col 0)
+    const c00 =  e[5]*(e[10]*e[15]-e[14]*e[11]) - e[9]*(e[6]*e[15]-e[14]*e[7]) + e[13]*(e[6]*e[11]-e[10]*e[7]);
+    const c01 = -(e[1]*(e[10]*e[15]-e[14]*e[11]) - e[9]*(e[2]*e[15]-e[14]*e[3]) + e[13]*(e[2]*e[11]-e[10]*e[3]));
+    const c02 =  e[1]*(e[6] *e[15]-e[14]*e[7])  - e[5]*(e[2]*e[15]-e[14]*e[3]) + e[13]*(e[2]*e[7] -e[6] *e[3]);
+    const c03 = -(e[1]*(e[6] *e[11]-e[10]*e[7])  - e[5]*(e[2]*e[11]-e[10]*e[3]) + e[9] *(e[2]*e[7] -e[6] *e[3]));
 
-    // Translation t
-    const tx = m[12], ty = m[13], tz = m[14];
+    const det = e[0]*c00 + e[4]*c01 + e[8]*c02 + e[12]*c03;
+    if (Math.abs(det) < 1e-10) return null;
+    const inv = 1.0 / det;
 
-    // Compute determinant of R
-    const det = r00 * (r11 * r22 - r12 * r21) -
-                r01 * (r10 * r22 - r12 * r20) +
-                r02 * (r10 * r21 - r11 * r20);
+    // Remaining cofactors
+    const c10 = -(e[4]*(e[10]*e[15]-e[14]*e[11]) - e[8]*(e[6]*e[15]-e[14]*e[7]) + e[12]*(e[6]*e[11]-e[10]*e[7]));
+    const c11 =  e[0]*(e[10]*e[15]-e[14]*e[11]) - e[8]*(e[2]*e[15]-e[14]*e[3]) + e[12]*(e[2]*e[11]-e[10]*e[3]);
+    const c12 = -(e[0]*(e[6] *e[15]-e[14]*e[7])  - e[4]*(e[2]*e[15]-e[14]*e[3]) + e[12]*(e[2]*e[7] -e[6] *e[3]));
+    const c13 =  e[0]*(e[6] *e[11]-e[10]*e[7])  - e[4]*(e[2]*e[11]-e[10]*e[3]) + e[8] *(e[2]*e[7] -e[6] *e[3]);
 
-    if (Math.abs(det) < 1e-10) {
-      return null;
-    }
+    const c20 =  e[4]*(e[9]*e[15]-e[13]*e[11]) - e[8]*(e[5]*e[15]-e[13]*e[7]) + e[12]*(e[5]*e[11]-e[9]*e[7]);
+    const c21 = -(e[0]*(e[9]*e[15]-e[13]*e[11]) - e[8]*(e[1]*e[15]-e[13]*e[3]) + e[12]*(e[1]*e[11]-e[9]*e[3]));
+    const c22 =  e[0]*(e[5]*e[15]-e[13]*e[7])  - e[4]*(e[1]*e[15]-e[13]*e[3]) + e[12]*(e[1]*e[7] -e[5]*e[3]);
+    const c23 = -(e[0]*(e[5]*e[11]-e[9] *e[7])  - e[4]*(e[1]*e[11]-e[9] *e[3]) + e[8] *(e[1]*e[7] -e[5]*e[3]));
 
-    const invDet = 1.0 / det;
+    const c30 = -(e[4]*(e[9]*e[14]-e[13]*e[10]) - e[8]*(e[5]*e[14]-e[13]*e[6]) + e[12]*(e[5]*e[10]-e[9]*e[6]));
+    const c31 =  e[0]*(e[9]*e[14]-e[13]*e[10]) - e[8]*(e[1]*e[14]-e[13]*e[2]) + e[12]*(e[1]*e[10]-e[9]*e[2]);
+    const c32 = -(e[0]*(e[5]*e[14]-e[13]*e[6])  - e[4]*(e[1]*e[14]-e[13]*e[2]) + e[12]*(e[1]*e[6] -e[5]*e[2]));
+    const c33 =  e[0]*(e[5]*e[10]-e[9] *e[6])  - e[4]*(e[1]*e[10]-e[9] *e[2]) + e[8] *(e[1]*e[6] -e[5]*e[2]);
 
-    // Compute R^-1 using adjugate
-    const invR00 = (r11 * r22 - r12 * r21) * invDet;
-    const invR01 = (r02 * r21 - r01 * r22) * invDet;
-    const invR02 = (r01 * r12 - r02 * r11) * invDet;
-    const invR10 = (r12 * r20 - r10 * r22) * invDet;
-    const invR11 = (r00 * r22 - r02 * r20) * invDet;
-    const invR12 = (r02 * r10 - r00 * r12) * invDet;
-    const invR20 = (r10 * r21 - r11 * r20) * invDet;
-    const invR21 = (r01 * r20 - r00 * r21) * invDet;
-    const invR22 = (r00 * r11 - r01 * r10) * invDet;
-
-    // -R^-1 * t
-    let ntx = -(invR00 * tx + invR01 * ty + invR02 * tz);
-    let nty = -(invR10 * tx + invR11 * ty + invR12 * tz);
-    let ntz = -(invR20 * tx + invR21 * ty + invR22 * tz);
-
-    ntx = ntx === 0 ? 0 : ntx;
-    nty = nty === 0 ? 0 : nty;
-    ntz = ntz === 0 ? 0 : ntz;
-
+    // result[col*4+row] = cofactor(row=col, col=row) / det
     return new Mat4([
-      invR00, invR10, invR20, 0,
-      invR01, invR11, invR21, 0,
-      invR02, invR12, invR22, 0,
-      ntx, nty, ntz, 1
+      c00*inv, c01*inv, c02*inv, c03*inv,
+      c10*inv, c11*inv, c12*inv, c13*inv,
+      c20*inv, c21*inv, c22*inv, c23*inv,
+      c30*inv, c31*inv, c32*inv, c33*inv,
     ]);
   }
 

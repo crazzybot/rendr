@@ -10,9 +10,7 @@ export class MeshRenderer extends Component {
   public material: Material | null = null;
 
   private device: GPUDevice | null = null;
-  private format: GPUTextureFormat = 'bgra8unorm';
   private initialized: boolean = false;
-  private renderLoggedOnce: boolean = false;
 
   setMesh(mesh: Mesh): void {
     this.mesh = mesh;
@@ -24,11 +22,14 @@ export class MeshRenderer extends Component {
     this.initialized = false;
   }
 
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
   initialize(device: GPUDevice, format: GPUTextureFormat): void {
     if (this.initialized || !this.mesh || !this.material) return;
 
     this.device = device;
-    this.format = format;
 
     this.mesh.createBuffers(device);
     this.material.createPipeline(device, format, this.mesh.getVertexBufferLayout());
@@ -37,51 +38,39 @@ export class MeshRenderer extends Component {
   }
 
   render(passEncoder: GPURenderPassEncoder, camera: Camera, light?: DirectionalLight): void {
-    if (!this.initialized || !this.mesh || !this.material || !this.entity || !this.device) {
-      if (!this.renderLoggedOnce) {
-        console.log('MeshRenderer render early return:', {
-          initialized: this.initialized,
-          hasMesh: !!this.mesh,
-          hasMaterial: !!this.material,
-          hasEntity: !!this.entity,
-          hasDevice: !!this.device
-        });
-        this.renderLoggedOnce = true;
-      }
-      return;
-    }
+    if (!this.initialized || !this.mesh || !this.material || !this.entity || !this.device) return;
 
     const pipeline = this.material.getPipeline();
     const bindGroup = this.material.getBindGroup();
-
-    if (!pipeline || !bindGroup) {
-      if (!this.renderLoggedOnce) {
-        console.log('MeshRenderer missing pipeline or bindGroup:', { pipeline: !!pipeline, bindGroup: !!bindGroup });
-        this.renderLoggedOnce = true;
-      }
-      return;
-    }
-
-    if (!this.renderLoggedOnce) {
-      console.log('MeshRenderer.render executing draw call for', this.entity.name);
-      this.renderLoggedOnce = true;
-    }
+    if (!pipeline || !bindGroup) return;
 
     const modelMatrix = this.entity.transform.getWorldMatrix();
     const viewProjectionMatrix = camera.getViewProjectionMatrix();
 
-    // Transpose in JS before sending to GPU
+    // Normal matrix = transpose(inverse(model 3x3)) — correct under non-uniform scale.
+    // Packed as WGSL mat3x3: 3 columns × 4 floats (vec3 padded to vec4 alignment).
+    let normalMatrix: Float32Array | null = null;
+    const invModel = modelMatrix.invert();
+    if (invModel) {
+      const e = invModel.elements;
+      normalMatrix = new Float32Array([
+        e[0], e[4], e[8],  0,
+        e[1], e[5], e[9],  0,
+        e[2], e[6], e[10], 0,
+      ]);
+    }
+
     this.material.updateUniforms(
       this.device,
       modelMatrix.elements,
-      viewProjectionMatrix.elements
+      viewProjectionMatrix.elements,
+      normalMatrix
     );
 
-    // Update light uniforms if a light is provided
     if (light) {
       const lightDir = light.getDirection();
       const lightColor = light.getFinalColor();
-      const cameraPos = camera.entity?.transform.position || new Vec3(0, 0, 0);
+      const cameraPos = camera.entity?.transform.position ?? new Vec3(0, 0, 0);
 
       this.material.updateLightUniforms(
         this.device,
@@ -113,7 +102,6 @@ export class MeshRenderer extends Component {
     if (this.mesh) {
       this.mesh.destroy();
     }
-
     if (this.material) {
       this.material.destroy();
     }

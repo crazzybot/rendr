@@ -132,7 +132,7 @@ export class Camera extends Component {
   }
 
   onUpdate(): void {
-    if (this.entity) {
+    if (this.entity && this.entity.transform.isDirty) {
       this.markDirty();
     }
   }

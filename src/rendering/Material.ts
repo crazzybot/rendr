@@ -37,7 +37,6 @@ export class Material {
     format: GPUTextureFormat,
     vertexBufferLayout: GPUVertexBufferLayout
   ): void {
-    console.log('Creating pipeline for material');
     this.shader.compile(device);
 
     const bindGroupLayout = device.createBindGroupLayout({
@@ -64,8 +63,9 @@ export class Material {
       bindGroupLayouts: [bindGroupLayout]
     });
 
+    // 64 (modelMatrix) + 64 (viewProjectionMatrix) + 48 (normalMatrix mat3x3 with column padding) + 16 (pad to 192)
     this.uniformBuffer = device.createBuffer({
-      size: 128,
+      size: 192,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     });
 
@@ -121,7 +121,6 @@ export class Material {
         format: 'depth24plus'
       }
     });
-    console.log('Pipeline created successfully');
   }
 
   private updateMaterialBuffer(device: GPUDevice): void {
@@ -135,12 +134,21 @@ export class Material {
     device.queue.writeBuffer(this.materialBuffer, 0, materialData);
   }
 
-  updateUniforms(device: GPUDevice, modelMatrix: Float32Array, viewProjectionMatrix: Float32Array): void {
+  updateUniforms(
+    device: GPUDevice,
+    modelMatrix: Float32Array,
+    viewProjectionMatrix: Float32Array,
+    normalMatrix: Float32Array | null = null
+  ): void {
     if (!this.uniformBuffer) return;
 
-    const uniformData = new Float32Array(32);
+    // 48 floats = 192 bytes: [0..15] model, [16..31] VP, [32..43] normalMatrix (mat3x3 with col padding), [44..47] pad
+    const uniformData = new Float32Array(48);
     uniformData.set(modelMatrix, 0);
     uniformData.set(viewProjectionMatrix, 16);
+    if (normalMatrix) {
+      uniformData.set(normalMatrix, 32);
+    }
 
     device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
   }

@@ -69,7 +69,7 @@ export class Engine {
   private gameLoop = (currentTime: number): void => {
     if (!this.running) return;
 
-    const deltaTime = (currentTime - this.lastTime) / 1000;
+    const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
     this.lastTime = currentTime;
 
     this.update(deltaTime);

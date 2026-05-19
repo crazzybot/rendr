@@ -7,76 +7,87 @@ export class Entity {
   public active: boolean = true;
   public scene: Scene | null = null;
 
-  private components: Map<string, Component> = new Map();
+  private components: Map<string, Component[]> = new Map();
   public transform: Transform;
 
   constructor(name: string = 'Entity') {
     this.name = name;
     this.transform = new Transform();
     this.transform.entity = this;
-    this.components.set('Transform', this.transform);
+    this.components.set('Transform', [this.transform]);
   }
 
   addComponent<T extends Component>(component: T): T {
-    const className = component.constructor.name;
-
-    if (this.components.has(className)) {
-      console.warn(`Component ${className} already exists on entity ${this.name}`);
-      return this.components.get(className) as T;
+    const key = component.constructor.name;
+    const list = this.components.get(key);
+    if (list) {
+      list.push(component);
+    } else {
+      this.components.set(key, [component]);
     }
-
     component.entity = this;
-    this.components.set(className, component);
-
     if (component.onAttach) {
       component.onAttach();
     }
-
     return component;
   }
 
   getComponent<T extends Component>(type: new (...args: any[]) => T): T | null {
-    return this.components.get(type.name) as T || null;
+    return (this.components.get(type.name)?.[0] as T) ?? null;
+  }
+
+  getComponentsOfType<T extends Component>(type: new (...args: any[]) => T): T[] {
+    return (this.components.get(type.name) ?? []) as T[];
   }
 
   getComponents(): Component[] {
-    return Array.from(this.components.values());
+    const result: Component[] = [];
+    for (const list of this.components.values()) {
+      result.push(...list);
+    }
+    return result;
   }
 
   removeComponent<T extends Component>(type: new (...args: any[]) => T): void {
-    const component = this.components.get(type.name);
-    if (component) {
-      if (component.onDetach) {
-        component.onDetach();
-      }
-      component.entity = null;
+    const list = this.components.get(type.name);
+    if (!list || list.length === 0) return;
+    const component = list[0];
+    if (component.onDetach) {
+      component.onDetach();
+    }
+    component.entity = null;
+    list.splice(0, 1);
+    if (list.length === 0) {
       this.components.delete(type.name);
     }
   }
 
   hasComponent<T extends Component>(type: new (...args: any[]) => T): boolean {
-    return this.components.has(type.name);
+    const list = this.components.get(type.name);
+    return list !== undefined && list.length > 0;
   }
 
   update(deltaTime: number): void {
     if (!this.active) return;
-
-    for (const component of this.components.values()) {
-      if (component.enabled && component.onUpdate) {
-        component.onUpdate(deltaTime);
+    for (const list of this.components.values()) {
+      for (const component of list) {
+        if (component.enabled && component.onUpdate) {
+          component.onUpdate(deltaTime);
+        }
       }
     }
   }
 
   destroy(): void {
-    for (const component of this.components.values()) {
-      if (component.onDestroy) {
-        component.onDestroy();
+    for (const list of this.components.values()) {
+      for (const component of list) {
+        if (component.onDestroy) {
+          component.onDestroy();
+        }
+        component.entity = null;
       }
-      component.entity = null;
     }
     this.components.clear();
-
     if (this.scene) {
       this.scene.removeEntity(this);
     }

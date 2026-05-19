@@ -46,6 +46,7 @@ export const BasicShader: ShaderSource = {
     struct Uniforms {
       modelMatrix: mat4x4<f32>,
       viewProjectionMatrix: mat4x4<f32>,
+      normalMatrix: mat3x3<f32>,
     };
 
     @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -70,15 +71,7 @@ export const BasicShader: ShaderSource = {
       let worldPos = uniforms.modelMatrix * vec4<f32>(input.position, 1.0);
       output.position = uniforms.viewProjectionMatrix * worldPos;
       output.worldPosition = worldPos.xyz;
-
-      // Transform normal using the upper-left 3x3 of the model matrix
-      // For uniform scaling and rotation, this is sufficient
-      let normalMatrix = mat3x3<f32>(
-        uniforms.modelMatrix[0].xyz,
-        uniforms.modelMatrix[1].xyz,
-        uniforms.modelMatrix[2].xyz
-      );
-      output.normal = normalize(normalMatrix * input.normal);
+      output.normal = normalize(uniforms.normalMatrix * input.normal);
       output.uv = input.uv;
 
       return output;
