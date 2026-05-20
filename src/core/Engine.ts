@@ -7,6 +7,7 @@ export interface EngineConfig {
   width?: number;
   height?: number;
   antialias?: boolean;
+  fixedTimestep?: number;
 }
 
 export class Engine {
@@ -17,6 +18,8 @@ export class Engine {
   private running: boolean = false;
   private lastTime: number = 0;
   private rafId: number = 0;
+  private accumulator: number = 0;
+  public fixedTimestep: number = 1 / 60;
 
   constructor(config: EngineConfig) {
     this.canvas = config.canvas;
@@ -29,6 +32,7 @@ export class Engine {
     });
 
     this.inputManager = new InputManager(this.canvas);
+    this.fixedTimestep = config.fixedTimestep ?? 1 / 60;
   }
 
   async initialize(): Promise<void> {
@@ -72,11 +76,24 @@ export class Engine {
     const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1);
     this.lastTime = currentTime;
 
+    this.accumulator += deltaTime;
+    while (this.accumulator >= this.fixedTimestep) {
+      this.fixedUpdate(this.fixedTimestep);
+      this.accumulator -= this.fixedTimestep;
+    }
+
+    const alpha = this.accumulator / this.fixedTimestep;
     this.update(deltaTime);
-    this.render();
+    this.render(alpha);
 
     this.rafId = requestAnimationFrame(this.gameLoop);
   };
+
+  private fixedUpdate(fixedDeltaTime: number): void {
+    if (this.currentScene) {
+      this.currentScene.fixedUpdate(fixedDeltaTime);
+    }
+  }
 
   private update(deltaTime: number): void {
     if (this.currentScene) {
@@ -86,7 +103,7 @@ export class Engine {
     this.inputManager.update();
   }
 
-  private render(): void {
+  private render(_alpha: number): void {
     if (this.currentScene) {
       this.renderer.render(this.currentScene);
     }

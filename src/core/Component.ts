@@ -7,5 +7,6 @@ export abstract class Component {
   onAttach?(): void;
   onDetach?(): void;
   onUpdate?(deltaTime: number): void;
+  onFixedUpdate?(fixedDeltaTime: number): void;
   onDestroy?(): void;
 }

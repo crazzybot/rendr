@@ -47,6 +47,12 @@ export class Scene {
     }
   }
 
+  fixedUpdate(fixedDeltaTime: number): void {
+    for (const entity of this.entities) {
+      entity.fixedUpdate(fixedDeltaTime);
+    }
+  }
+
   clear(): void {
     for (const entity of this.entities) {
       entity.destroy();

@@ -78,6 +78,17 @@ export class Entity {
     }
   }
 
+  fixedUpdate(fixedDeltaTime: number): void {
+    if (!this.active) return;
+    for (const list of this.components.values()) {
+      for (const component of list) {
+        if (component.enabled && component.onFixedUpdate) {
+          component.onFixedUpdate(fixedDeltaTime);
+        }
+      }
+    }
+  }
+
   destroy(): void {
     for (const list of this.components.values()) {
       for (const component of list) {

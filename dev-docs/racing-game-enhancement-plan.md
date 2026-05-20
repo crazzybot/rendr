@@ -34,7 +34,7 @@ Apply all bug fixes from the table above. Add `deltaTime` clamping to the engine
 
 ---
 
-### Phase 2 — Fixed Timestep Engine Loop
+### Phase 2 — Fixed Timestep Engine Loop ✅ Complete
 
 **Why:** Physics must run at a constant rate regardless of render framerate. Non-deterministic deltaTime causes cars to tunnel through walls on slow frames and behave differently across machines.
 
@@ -237,7 +237,7 @@ Thin wrapper around the Web Audio API `AudioContext`:
 
 ```
 Phase 1  — Bug fixes        ✅ Complete
-Phase 2  — Fixed timestep         (1 day)
+Phase 2  — Fixed timestep   ✅ Complete
 Phase 3  — Car physics            (3–5 days)
 Phase 4  — Collision detection    (2–3 days)
 Phase 5  — Texture mapping        (2 days)
