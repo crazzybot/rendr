@@ -16,10 +16,16 @@ import {
 } from '../../src/index';
 import { CarController } from './CarController';
 
-// Simple follow camera — no lag, just hard-follow for now (Phase 6 adds smoothing)
 class FollowCamera extends Component {
   private target: Entity;
   private camera: Camera;
+
+  // Higher = snappier, lower = more elastic lag
+  public positionLag: number = 6;
+  public lookAtLag: number = 8;
+
+  private currentPos: Vec3 | null = null;
+  private currentLookAt: Vec3 | null = null;
 
   constructor(target: Entity, camera: Camera) {
     super();
@@ -27,16 +33,26 @@ class FollowCamera extends Component {
     this.camera = camera;
   }
 
-  onUpdate(_dt: number): void {
+  onUpdate(dt: number): void {
     const carPos = this.target.transform.position;
     const carForward = this.target.transform.getForward();
 
-    const desiredPos = carPos
-      .sub(carForward.mul(8))
-      .add(new Vec3(0, 3, 0));
+    const desiredPos = carPos.sub(carForward.mul(8)).add(new Vec3(0, 3, 0));
+    const desiredLookAt = carPos.add(new Vec3(0, 0.5, 0));
 
-    this.entity!.transform.position = desiredPos;
-    this.entity!.transform.lookAt(carPos.add(new Vec3(0, 0.5, 0)));
+    // Seed positions on first frame so the camera doesn't fly in from the origin
+    if (!this.currentPos) this.currentPos = desiredPos.clone();
+    if (!this.currentLookAt) this.currentLookAt = desiredLookAt.clone();
+
+    // Exponential smoothing — frame-rate independent elastic follow
+    const pFactor = 1 - Math.exp(-this.positionLag * dt);
+    const lFactor = 1 - Math.exp(-this.lookAtLag * dt);
+
+    this.currentPos = this.currentPos.lerp(desiredPos, pFactor);
+    this.currentLookAt = this.currentLookAt.lerp(desiredLookAt, lFactor);
+
+    this.entity!.transform.position = this.currentPos;
+    this.entity!.transform.lookAt(this.currentLookAt);
   }
 }
 

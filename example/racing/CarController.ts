@@ -23,9 +23,9 @@ export class CarController extends Component {
     // Handbrake / brake: Space
     physics.brakeInput = input.isKeyPressed('Space') ? 1 : 0;
 
-    // Steering: A = left, D = right
+    // Steering: A / ArrowLeft = left, D / ArrowRight = right
     physics.steeringInput =
-      (input.isKeyPressed('KeyD') ? 1 : 0) -
-      (input.isKeyPressed('KeyA') ? 1 : 0);
+      ((input.isKeyPressed('KeyD') || input.isKeyPressed('ArrowRight')) ? 1 : 0) -
+      ((input.isKeyPressed('KeyA') || input.isKeyPressed('ArrowLeft')) ? 1 : 0);
   }
 }
