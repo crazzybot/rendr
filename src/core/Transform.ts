@@ -107,13 +107,13 @@ export class Transform extends Component {
     const right = forward.cross(up).normalize();
     const actualUp = right.cross(forward).normalize();
 
-    // Create rotation matrix: column-major, columns are basis vectors
-    // For camera: right = +X, up = +Y, forward = -Z (camera looks down -Z)
+    // Camera object transform: each group of 4 = one column (column-major).
+    // Col 0 = right (+X), col 1 = actualUp (+Y), col 2 = -forward (camera looks down -Z).
     const m = new Mat4([
-      right.x, actualUp.x, -forward.x, 0,
-      right.y, actualUp.y, -forward.y, 0,
-      right.z, actualUp.z, -forward.z, 0,
-      0, 0, 0, 1
+      right.x,    right.y,    right.z,    0,
+      actualUp.x, actualUp.y, actualUp.z, 0,
+      -forward.x, -forward.y, -forward.z, 0,
+      0,          0,          0,          1
     ]);
 
     // Convert rotation matrix to quaternion using trace method

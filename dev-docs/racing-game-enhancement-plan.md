@@ -57,25 +57,39 @@ render(alpha = accumulator / fixedTimestep)
 
 ---
 
-### Phase 3 — Arcade Car Physics
+### Phase 3 — Arcade Car Physics ⚡ In Progress
 
 **Why:** Core gameplay. Without a physics model the car cannot drive.
 
-**New file: `src/physics/CarPhysics.ts`** (Component)
+**New file: `src/physics/RigidBody.ts`** ✅ — generic rigid body with velocity, drag, gravity,
+`applyForce`/`applyImpulse`; semi-implicit Euler integration on `onFixedUpdate`.
 
-Minimum viable arcade model using suspension raycasts:
-- Four ray casts downward from wheel hub positions to detect ground contact distance.
-- Apply spring force along each ray hit normal (suspension).
-- Engine force applied to rear-wheel positions along the car's forward vector.
-- Friction / grip: lateral velocity damping at each wheel contact point.
-- Steering: rotate front wheel direction by a steering angle derived from input.
-- Drag: velocity scaled by a drag coefficient each tick.
+**New file: `src/physics/CarPhysics.ts`** ✅ (extends `RigidBody`)
 
-**New file: `src/physics/RaycastResult.ts`** — hit point, normal, distance, entity.
+Flat-ground arcade model (no raycasts yet):
+- ✅ Engine force applied along car's forward vector (`throttleInput`)
+- ✅ Braking force opposing current motion (`brakeInput`)
+- ✅ Lateral velocity damping for grip (no sideways sliding)
+- ✅ Steering: yaw rate proportional to speed (`steeringInput`), reversed in reverse gear
+- ✅ Air drag per fixed step
+- ✅ Ground constraint: car clamped to `groundY` plane
 
-**Changes to `Engine.ts`:** Wire `onFixedUpdate` into the physics component.
+Pending (requires Phase 4 raycasts):
+- Four ray casts downward for suspension / slope contact.
+- Spring force along ray hit normal.
+- Per-wheel friction at contact points.
+
+**New file: `src/physics/RaycastResult.ts`** — hit point, normal, distance, entity. (pending)
+
+**Racing example scaffolding** ✅ `example/racing/`
+- `main.ts` — engine bootstrap, ground plane, obstacle boxes, car entity, follow camera, speed HUD
+- `CarController.ts` — maps WASD/Space keyboard input to `CarPhysics` inputs each frame
+
+**Changes to `Engine.ts`:** Wire `onFixedUpdate` into the physics component. ✅ (done in Phase 2)
 
 **Deliverable:** A car that accelerates, steers, brakes, and reacts to gravity.
+- ✅ Accelerates, steers, brakes on flat ground — playable at `racing.html`
+- ⏳ Suspension raycasts and slope response (after collision/raycast support)
 
 ---
 
@@ -238,7 +252,7 @@ Thin wrapper around the Web Audio API `AudioContext`:
 ```
 Phase 1  — Bug fixes        ✅ Complete
 Phase 2  — Fixed timestep   ✅ Complete
-Phase 3  — Car physics            (3–5 days)
+Phase 3  — Car physics      ⚡ In Progress (flat ground done; raycasts pending)
 Phase 4  — Collision detection    (2–3 days)
 Phase 5  — Texture mapping        (2 days)
 Phase 6  — Follow camera          (1 day)

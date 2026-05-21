@@ -77,15 +77,12 @@ export class Camera extends Component {
   }
 
   getViewMatrix(): Mat4 {
-    if (!this._viewMatrix || this._dirty) {
+    const transformDirty = this.entity?.transform.isDirty ?? false;
+    if (!this._viewMatrix || this._dirty || transformDirty) {
       if (this.entity) {
         const worldMatrix = this.entity.transform.getWorldMatrix();
         const inverted = worldMatrix.invert();
-        if (inverted) {
-          this._viewMatrix = inverted;
-        } else {
-          this._viewMatrix = Mat4.identity();
-        }
+        this._viewMatrix = inverted ?? Mat4.identity();
       } else {
         this._viewMatrix = Mat4.identity();
       }
@@ -94,7 +91,8 @@ export class Camera extends Component {
   }
 
   getViewProjectionMatrix(): Mat4 {
-    if (!this._viewProjectionMatrix || this._dirty) {
+    const transformDirty = this.entity?.transform.isDirty ?? false;
+    if (!this._viewProjectionMatrix || this._dirty || transformDirty) {
       this._viewProjectionMatrix = this.getProjectionMatrix().multiply(this.getViewMatrix());
       this._dirty = false;
     }
