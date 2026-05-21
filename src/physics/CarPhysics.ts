@@ -9,7 +9,7 @@ export class CarPhysics extends RigidBody {
   public maxSpeed: number = 20;          // m/s forward
   public maxReverseSpeed: number = 8;    // m/s reverse
   public lateralFriction: number = 10;   // sideways velocity damping rate
-  public rollingFriction: number = 2;    // forward deceleration with no throttle input
+  public rollingFriction: number = 1;    // forward deceleration with no throttle input
   public steeringSpeed: number = 1.8;    // max yaw rate (rad/s) at full speed
   public groundY: number = 0;
 
@@ -21,7 +21,10 @@ export class CarPhysics extends RigidBody {
   constructor() {
     super();
     this.useGravity = false; // grounded via constraint, not gravity
-    this.drag = 1.5;         // air resistance
+    // drag equilibrium = engineForce / drag; keep it well above maxSpeed so the
+    // explicit maxSpeed cap (not drag) is what limits top speed.
+    // 15 / 0.3 = 50 m/s equilibrium → maxSpeed = 20 m/s cap is the real limiter.
+    this.drag = 0.3;
   }
 
   get speed(): number {
