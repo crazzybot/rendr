@@ -12,9 +12,8 @@ import {
   UnlitShader,
   Component,
   Entity,
-  CarPhysics,
 } from '../../src/index';
-import { CarController } from './CarController';
+import { createCarEntity } from './createCarEntity';
 
 class FollowCamera extends Component {
   private target: Entity;
@@ -125,28 +124,7 @@ async function main() {
     }
 
     // --- Car ---
-    const carEntity = scene.createEntity('Car');
-    const carMesh = Geometry.createCar(1);
-    const carMat = new Material(undefined, {
-      color: new Vec4(0.9, 0.12, 0.12, 1),
-      ambient: 0.3,
-      diffuse: 0.8,
-    });
-    const carRenderer = new MeshRenderer();
-    carRenderer.setMesh(carMesh);
-    carRenderer.setMaterial(carMat);
-    carEntity.addComponent(carRenderer);
-    carEntity.transform.position = new Vec3(0, 0, 0);
-    // Rotate 180° so the car faces -Z: camera sits at +Z, lookAt cross product
-    // produces correct right=+X (the formula flips when camera looks toward +Z).
-    carEntity.transform.rotation = Quat.fromAxisAngle(Vec3.up(), Math.PI);
-    carRenderer.initialize(device, format);
-
-    const carPhysics = new CarPhysics();
-    carEntity.addComponent(carPhysics);
-
-    const carController = new CarController(engine);
-    carEntity.addComponent(carController);
+    const { car: carEntity, physics: carPhysics } = createCarEntity(scene, device, format, engine);
 
     // --- Camera ---
     const cameraEntity = scene.createEntity('Camera');
