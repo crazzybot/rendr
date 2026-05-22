@@ -156,7 +156,7 @@ async function main() {
     cameraEntity.addComponent(camera);
     cameraEntity.transform.position = new Vec3(0, 2, 4);
     // cameraEntity.transform.lookAt(Vec3.zero(), Vec3.up());
-    cameraEntity.transform.lookAt(new Vec3(0, 4, 0), Vec3.up());
+    cameraEntity.transform.lookAt(Vec3.zero(), Vec3.up());
 
 
     const cameraController = new CameraController(engine);

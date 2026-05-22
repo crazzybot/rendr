@@ -289,25 +289,25 @@ export class Geometry {
 
     // Main body
     addQuad(
-      [-halfWidth, 0, halfLength], [halfWidth, 0, halfLength],
+      [-halfWidth, bodyHeight/2, halfLength], [halfWidth, bodyHeight/2, halfLength],
       [halfWidth, bodyHeight, halfLength], [-halfWidth, bodyHeight, halfLength],
       [0, 0, 1]
     );
 
     addQuad(
-      [halfWidth, 0, -halfLength], [-halfWidth, 0, -halfLength],
+      [halfWidth, bodyHeight/2, -halfLength], [-halfWidth, bodyHeight/2, -halfLength],
       [-halfWidth, bodyHeight, -halfLength], [halfWidth, bodyHeight, -halfLength],
       [0, 0, -1]
     );
 
     addQuad(
-      [-halfWidth, 0, -halfLength], [-halfWidth, 0, halfLength],
+      [-halfWidth, bodyHeight/2, -halfLength], [-halfWidth, bodyHeight/2, halfLength],
       [-halfWidth, bodyHeight, halfLength], [-halfWidth, bodyHeight, -halfLength],
       [-1, 0, 0]
     );
 
     addQuad(
-      [halfWidth, 0, halfLength], [halfWidth, 0, -halfLength],
+      [halfWidth, bodyHeight/2, halfLength], [halfWidth, bodyHeight/2, -halfLength],
       [halfWidth, bodyHeight, -halfLength], [halfWidth, bodyHeight, halfLength],
       [1, 0, 0]
     );
@@ -319,8 +319,8 @@ export class Geometry {
     );
 
     addQuad(
-      [-halfWidth, 0, -halfLength], [halfWidth, 0, -halfLength],
-      [halfWidth, 0, halfLength], [-halfWidth, 0, halfLength],
+      [-halfWidth, bodyHeight/2, -halfLength], [halfWidth, bodyHeight/2, -halfLength],
+      [halfWidth, bodyHeight/2, halfLength], [-halfWidth, bodyHeight/2, halfLength],
       [0, -1, 0]
     );
 
@@ -361,12 +361,13 @@ export class Geometry {
       [0, 1, 0]
     );
 
-    // Wheels
+    // Wheels — center X = halfWidth + wheelWidth/2 so the inner disc is flush
+    // with the body wall and the outer disc protrudes visibly to the side.
     const wheelPositions = [
-      { x: halfWidth * 0.8, z: halfLength * 0.6 },
-      { x: -halfWidth * 0.8, z: halfLength * 0.6 },
-      { x: halfWidth * 0.8, z: -halfLength * 0.6 },
-      { x: -halfWidth * 0.8, z: -halfLength * 0.6 }
+      { x:  halfWidth + wheelWidth / 2, z:  halfLength * 0.6 },
+      { x: -(halfWidth + wheelWidth / 2), z:  halfLength * 0.6 },
+      { x:  halfWidth + wheelWidth / 2, z: -halfLength * 0.6 },
+      { x: -(halfWidth + wheelWidth / 2), z: -halfLength * 0.6 }
     ];
 
     const addWheel = (centerX: number, centerZ: number) => {
@@ -374,7 +375,7 @@ export class Geometry {
       const y = wheelRadius;
 
       for (let side = 0; side < 2; side++) {
-        const offsetX = side === 0 ? -wheelWidth / 2 : wheelWidth / 2;
+        const offsetX = side === 0 ? -wheelWidth/2 : wheelWidth/2;
         const normalX = side === 0 ? -1 : 1;
         const centerIdx = currentIndex;
 
@@ -400,9 +401,9 @@ export class Geometry {
 
         for (let i = 0; i < segments; i++) {
           if (side === 0) {
-            indices.push(centerIdx, centerIdx + i + 1, centerIdx + i + 2);
-          } else {
             indices.push(centerIdx, centerIdx + i + 2, centerIdx + i + 1);
+          } else {
+            indices.push(centerIdx, centerIdx + i + 1, centerIdx + i + 2);
           }
         }
       }
@@ -429,7 +430,7 @@ export class Geometry {
         uvs.push(0, 0);
       }
 
-      const sideStartIdx = currentIndex - (segments + 1) * 2;
+      const sideStartIdx = currentIndex; // tread vertices start here (currentIndex was not incremented during their push)
       for (let i = 0; i < segments; i++) {
         const a = sideStartIdx + i * 2;
         const b = a + 1;
