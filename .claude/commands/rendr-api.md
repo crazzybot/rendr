@@ -114,8 +114,21 @@ getUp(): Vec3        // world +Y axis
 ### Entity
 ```ts
 new Entity(name?)
-name: string    active: boolean    scene: Scene|null
+name: string    active: boolean
 transform: Transform   // always present
+
+// scene is a smart property:
+//   getter — returns own _scene, or walks up parent chain if null
+//   setter — stores value and propagates to all children
+scene: Scene | null
+
+// Hierarchy — only root entities live in Scene.entities;
+// child entities are managed entirely through addChild/removeChild
+parent: Entity | null   // null = root entity
+children: Entity[]
+
+addChild(child: Entity): void    // wires transform parent + propagates scene
+removeChild(child: Entity): void // detaches (does not destroy)
 
 addComponent<T>(c: T): T
 getComponent<T>(Type): T|null          // first component of that type
@@ -123,7 +136,7 @@ getComponentsOfType<T>(Type): T[]
 getComponents(): Component[]
 removeComponent<T>(Type): void
 hasComponent<T>(Type): boolean
-destroy(): void
+destroy(): void   // destroys all children first, then detaches from parent/scene
 ```
 
 **Gotcha:** component lookup uses `constructor.name` — avoid minification that renames classes.
@@ -131,11 +144,12 @@ destroy(): void
 ### Scene
 ```ts
 new Scene(name?)
-createEntity(name?): Entity         // creates + adds to scene
-addEntity(e): void   removeEntity(e): void
+createEntity(name?): Entity         // creates root entity + adds to scene
+addEntity(e): void      // only accepts root entities (parent===null); silently ignores children
+removeEntity(e): void
 getEntity(name): Entity|null
-getEntities(): Entity[]
-findEntitiesWithComponent<T>(Type): Entity[]
+getEntities(): Entity[]             // root entities only
+findEntitiesWithComponent<T>(Type): Entity[]   // searches full entity tree recursively
 update(dt): void   fixedUpdate(dt): void   clear(): void
 ```
 
@@ -177,7 +191,7 @@ initialize(device: GPUDevice, format: GPUTextureFormat): void   // must call bef
 isInitialized(): boolean
 render(pass, camera, light?): void
 ```
-**The Renderer collects all entities with MeshRenderer from the scene, so each entity with a MeshRenderer must be added to the scene.**
+**The Renderer collects entities with MeshRenderer via `scene.findEntitiesWithComponent()`, which searches the full entity tree recursively. Child entities with a MeshRenderer do not need to be added to the scene directly — adding them as children of a root entity is sufficient.**
 
 ### DirectionalLight
 ```ts
@@ -358,6 +372,9 @@ engine.start();
 - Call `mr.initialize(device, format)` on every MeshRenderer **before** `engine.start()`
 - Each `Material` instance has its own GPU uniform buffers — **do not share** a Material across multiple MeshRenderers
 - Transform `position`/`rotation`/`scale` setters mark the dirty flag and cascade to children
-- `setParent()` does not convert the local position to world — set local position explicitly after parenting
+- `entity.addChild(child)` is the correct way to build entity hierarchies — it wires the transform parent AND propagates the scene reference; do **not** use `transform.setParent()` alone for entity-level hierarchy
+- `transform.setParent()` operates only on transforms; use it when you want transform inheritance without entity ownership (e.g. a camera loosely tracking an object)
+- `addChild` / `scene.addEntity` both use the same `scene` setter, so the scene reference propagates automatically to all descendants
+- `addEntity` silently ignores entities that already have a parent — do **not** add child entities to the scene
 - `getComponent()` returns the **first** component of that type; use `getComponentsOfType()` for multiples
 - The Renderer finds the first `Camera` and first `DirectionalLight` in the scene; add exactly one of each per scene

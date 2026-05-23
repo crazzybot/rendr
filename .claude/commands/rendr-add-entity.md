@@ -41,11 +41,17 @@ myEntity.transform.scale = new Vec3(sx, sy, sz);
 
 ## Child entities (follow a parent)
 ```ts
-childEntity.transform.setParent(parentEntity.transform);
-// Set local position AFTER setParent — it stays local, not converted
-childEntity.transform.position = new Vec3(localX, localY, localZ);
-// childEntity must still be added to scene via scene.createEntity/addEntity
+// Create child with plain Entity — do NOT use scene.createEntity()
+const childEntity = new Entity('ChildName');
+childEntity.transform.position = new Vec3(localX, localY, localZ); // local offset
+// ... add MeshRenderer, components ...
+
+parentEntity.addChild(childEntity);
+// addChild: wires transform hierarchy, propagates scene reference, cascades update/render
+// childEntity is NOT in scene.entities — it is owned by parentEntity
 ```
+
+**Never call `scene.addEntity(childEntity)` or `scene.createEntity()` for children — `addEntity` silently ignores entities that have a parent, and `createEntity` returns a root entity that won't follow the parent.**
 
 ## Constraint reminders
 - Every MeshRenderer needs its own Material instance (GPU uniform buffers are per-instance)

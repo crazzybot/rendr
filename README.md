@@ -132,9 +132,26 @@ entity.transform.scale = new Vec3(2, 2, 2);
 
 // Look at target
 entity.transform.lookAt(new Vec3(0, 0, 0), Vec3.up());
+```
 
-// Hierarchy
-entity.transform.setParent(parentEntity.transform);
+### Entity Hierarchy
+
+Entities can be nested into parent-child trees. Only the root entity is added to the scene; children are managed through the parent.
+
+```typescript
+// Create root entity and add to scene
+const car = scene.createEntity('Car');
+
+// Create child entities — do NOT add to scene
+const wheel = new Entity('Wheel');
+wheel.transform.position = new Vec3(1, 0, 1); // local offset
+car.addChild(wheel); // wires transform hierarchy + propagates scene reference
+
+// Children are updated and rendered automatically through the parent
+// car.update() cascades to wheel, scene.findEntitiesWithComponent() searches recursively
+
+// Detach a child (does not destroy it)
+car.removeChild(wheel);
 ```
 
 ### Geometries
@@ -342,11 +359,11 @@ Check the `example/` directory for more comprehensive examples:
 
 ### Scene
 
-- `createEntity(name?: string): Entity`
-- `addEntity(entity: Entity): void`
+- `createEntity(name?: string): Entity` — creates a root entity and adds it to the scene
+- `addEntity(entity: Entity): void` — only accepts root entities (no parent); silently ignores children
 - `removeEntity(entity: Entity): void`
 - `getEntity(name: string): Entity | null`
-- `findEntitiesWithComponent<T>(type): Entity[]`
+- `findEntitiesWithComponent<T>(type): Entity[]` — searches the full entity tree recursively
 
 ### Entity
 
@@ -354,6 +371,10 @@ Check the `example/` directory for more comprehensive examples:
 - `getComponent<T extends Component>(type): T | null`
 - `removeComponent<T extends Component>(type): void`
 - `hasComponent<T extends Component>(type): boolean`
+- `addChild(child: Entity): void` — attach a child; wires transform hierarchy and propagates scene reference
+- `removeChild(child: Entity): void` — detach a child without destroying it
+- `parent: Entity | null` — read-only hierarchy link
+- `children: Entity[]` — direct children
 
 ## Contributing
 
