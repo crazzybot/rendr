@@ -5,7 +5,10 @@ import { Scene } from './Scene';
 export class Entity {
   public name: string;
   public active: boolean = true;
-  public scene: Scene | null = null;
+  private _scene: Scene | null = null;
+
+  public parent: Entity | null = null;
+  public children: Entity[] = [];
 
   private components: Map<string, Component[]> = new Map();
   public transform: Transform;
@@ -15,6 +18,37 @@ export class Entity {
     this.transform = new Transform();
     this.transform.entity = this;
     this.components.set('Transform', [this.transform]);
+  }
+
+  get scene(): Scene | null {
+    if (this._scene !== null) return this._scene;
+    return this.parent ? this.parent.scene : null;
+  }
+
+  set scene(value: Scene | null) {
+    this._scene = value;
+    for (const child of this.children) {
+      child.scene = value;
+    }
+  }
+
+  addChild(child: Entity): void {
+    if (child.parent) {
+      child.parent.removeChild(child);
+    }
+    child.parent = this;
+    this.children.push(child);
+    child.transform.setParent(this.transform);
+    child.scene = this._scene;
+  }
+
+  removeChild(child: Entity): void {
+    const index = this.children.indexOf(child);
+    if (index === -1) return;
+    this.children.splice(index, 1);
+    child.parent = null;
+    child.transform.setParent(null);
+    child.scene = null;
   }
 
   addComponent<T extends Component>(component: T): T {
@@ -76,6 +110,9 @@ export class Entity {
         }
       }
     }
+    for (const child of this.children) {
+      child.update(deltaTime);
+    }
   }
 
   fixedUpdate(fixedDeltaTime: number): void {
@@ -87,9 +124,18 @@ export class Entity {
         }
       }
     }
+    for (const child of this.children) {
+      child.fixedUpdate(fixedDeltaTime);
+    }
   }
 
   destroy(): void {
+    for (const child of this.children) {
+      child.parent = null;
+      child.destroy();
+    }
+    this.children = [];
+
     for (const list of this.components.values()) {
       for (const component of list) {
         if (component.onDestroy) {
@@ -99,8 +145,14 @@ export class Entity {
       }
     }
     this.components.clear();
-    if (this.scene) {
-      this.scene.removeEntity(this);
+
+    if (this.parent) {
+      const idx = this.parent.children.indexOf(this);
+      if (idx !== -1) this.parent.children.splice(idx, 1);
+      this.parent = null;
+    } else if (this._scene) {
+      this._scene.removeEntity(this);
     }
+    this._scene = null;
   }
 }

@@ -15,6 +15,7 @@ export class Scene {
   }
 
   addEntity(entity: Entity): void {
+    if (entity.parent !== null) return;
     if (!this.entities.includes(entity)) {
       this.entities.push(entity);
     }
@@ -38,7 +39,13 @@ export class Scene {
   }
 
   findEntitiesWithComponent<T>(type: new (...args: any[]) => T): Entity[] {
-    return this.entities.filter(e => e.hasComponent(type as any));
+    const result: Entity[] = [];
+    const collect = (entity: Entity) => {
+      if (entity.hasComponent(type as any)) result.push(entity);
+      for (const child of entity.children) collect(child);
+    };
+    for (const entity of this.entities) collect(entity);
+    return result;
   }
 
   update(deltaTime: number): void {

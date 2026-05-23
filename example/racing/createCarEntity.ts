@@ -57,9 +57,9 @@ export function createCarEntity(
   car.transform.rotation = Quat.fromAxisAngle(Vec3.up(), Math.PI);
   bodyRenderer.initialize(device, format);
 
-  // --- Wheel entities (black cylinders, parented to car) ---
+  // --- Wheel entities (black cylinders, children of car) ---
   const wheelEntities = WHEEL_DEFS.map(def => {
-    const wheel = scene.createEntity(def.name);
+    const wheel = new Entity(def.name);
 
     const wheelRenderer = new MeshRenderer();
     wheelRenderer.setMesh(Geometry.createCylinder(WHEEL_RADIUS, WHEEL_WIDTH, 16));
@@ -71,12 +71,11 @@ export function createCarEntity(
       shininess: 8,
     }));
     wheel.addComponent(wheelRenderer);
-
-    wheel.transform.setParent(car.transform);
     wheel.transform.position = new Vec3(def.x, WHEEL_RADIUS, def.z);
     // Upright default rotation set by WheelSteering on every frame
     wheelRenderer.initialize(device, format);
 
+    car.addChild(wheel);
     return wheel;
   });
 
