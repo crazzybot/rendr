@@ -14,7 +14,7 @@ import {
   MouseButton,
   Component,
   DirectionalLight
-} from '../src/index';
+} from '../../src/index';
 
 class RotateComponent extends Component {
   private speed: Vec3;

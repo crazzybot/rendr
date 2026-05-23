@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rendr — Entity Editor</title>
+  <style>
+    /* ── Reset & Base ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-app:      #141414;
+      --bg-panel:    #1e1e1e;
+      --bg-toolbar:  #252525;
+      --bg-item:     #282828;
+      --bg-hover:    #2e2e2e;
+      --bg-selected: #1a3a5c;
+      --bg-input:    #2a2a2a;
+      --border:      #333333;
+      --border-hi:   #444444;
+      --text:        #cccccc;
+      --text-dim:    #888888;
+      --text-bright: #eeeeee;
+      --accent:      #3d8ef0;
+      --accent-hi:   #5da4ff;
+      --accent-dim:  #1a4a80;
+      --x-color:     #e06c75;
+      --y-color:     #98c379;
+      --z-color:     #61afef;
+      --danger:      #cc3333;
+      --radius:      4px;
+      --toolbar-h:   44px;
+      --status-h:    24px;
+      --panel-l:     240px;
+      --panel-r:     288px;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-app);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+      user-select: none;
+    }
+
+    /* ── Layout Grid ───────────────────────────────────────────── */
+    #app {
+      display: grid;
+      grid-template-rows: var(--toolbar-h) 1fr var(--status-h);
+      grid-template-columns: var(--panel-l) 1fr var(--panel-r);
+      grid-template-areas:
+        "toolbar  toolbar   toolbar"
+        "outliner viewport  properties"
+        "status   status    status";
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* ── Toolbar ───────────────────────────────────────────────── */
+    #toolbar {
+      grid-area: toolbar;
+      background: var(--bg-toolbar);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 10px;
+      overflow: hidden;
+    }
+
+    .tool-logo {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--accent-hi);
+      letter-spacing: 0.5px;
+      padding-right: 10px;
+      margin-right: 4px;
+      border-right: 1px solid var(--border);
+    }
+
+    .tool-sep {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 4px;
+      flex-shrink: 0;
+    }
+
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .tool-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+
+    .tbtn {
+      background: var(--bg-item);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 4px 9px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .tbtn:hover    { background: var(--bg-hover); border-color: var(--border-hi); color: var(--text-bright); }
+    .tbtn:active   { background: var(--accent-dim); border-color: var(--accent); }
+    .tbtn.csg      { border-color: #2a4070; color: #7ab3f5; }
+    .tbtn.csg:hover{ background: #1a2d4a; border-color: var(--accent); color: var(--accent-hi); }
+    .tbtn.danger   { border-color: #4a2020; color: #e07070; }
+    .tbtn.danger:hover { background: #3a1a1a; border-color: var(--danger); color: #ff8080; }
+
+    /* ── Left Panel: Outliner ──────────────────────────────────── */
+    #outliner {
+      grid-area: outliner;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 6px 10px;
+      background: var(--bg-toolbar);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      flex-shrink: 0;
+    }
+
+    #outliner-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+
+    /* Tree rows */
+    .tree-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: background 0.08s;
+      border-radius: 2px;
+      margin: 0 4px;
+    }
+    .tree-row:hover    { background: var(--bg-hover); }
+    .tree-row.selected { background: var(--bg-selected); color: var(--text-bright); }
+
+    .tree-icon {
+      width: 12px;
+      font-size: 9px;
+      color: var(--text-dim);
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .tree-label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+
+    /* Scrollbar styling */
+    #outliner-body::-webkit-scrollbar { width: 6px; }
+    #outliner-body::-webkit-scrollbar-track { background: transparent; }
+    #outliner-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Central Viewport ──────────────────────────────────────── */
+    #viewport-wrap {
+      grid-area: viewport;
+      position: relative;
+      overflow: hidden;
+      background: #0d0d0d;
+    }
+
+    #viewport {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #viewport-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.55);
+      color: var(--text-dim);
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      pointer-events: none;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Right Panel: Properties ───────────────────────────────── */
+    #properties {
+      grid-area: properties;
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #properties-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+    #properties-body::-webkit-scrollbar { width: 6px; }
+    #properties-body::-webkit-scrollbar-track { background: transparent; }
+    #properties-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .prop-empty {
+      color: var(--text-dim);
+      font-style: italic;
+      padding: 20px 12px;
+      text-align: center;
+    }
+
+    .prop-section {
+      padding: 4px 0 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .prop-section:last-child { border-bottom: none; }
+
+    .prop-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 4px 12px 6px;
+    }
+
+    .prop-row {
+      display: flex;
+      align-items: center;
+      padding: 3px 12px;
+      gap: 6px;
+      min-height: 22px;
+    }
+
+    .prop-row > label:first-child {
+      color: var(--text-dim);
+      font-size: 11px;
+      width: 56px;
+      flex-shrink: 0;
+    }
+
+    .prop-xyz {
+      display: grid;
+      grid-template-columns: 12px 1fr 12px 1fr 12px 1fr;
+      align-items: center;
+      gap: 3px;
+      flex: 1;
+    }
+
+    .axis-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+      width: 12px;
+    }
+    .axis-label.x { color: var(--x-color); }
+    .axis-label.y { color: var(--y-color); }
+    .axis-label.z { color: var(--z-color); }
+
+    .prop-num {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-bright);
+      font-size: 11px;
+      padding: 2px 4px;
+      width: 100%;
+      min-width: 0;
+      text-align: right;
+      outline: none;
+      transition: border-color 0.1s;
+    }
+    .prop-num:focus { border-color: var(--accent); }
+    .prop-num::-webkit-inner-spin-button { opacity: 0.4; }
+
+    .prop-color-row { gap: 10px; }
+    .prop-color-row input[type=color] {
+      width: 40px;
+      height: 24px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: transparent;
+      cursor: pointer;
+      padding: 1px;
+    }
+
+    input[type=range] {
+      flex: 1;
+      accent-color: var(--accent);
+      height: 3px;
+    }
+
+    .slider-val {
+      color: var(--text-dim);
+      font-size: 10px;
+      width: 28px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── Status Bar ─────────────────────────────────────────────── */
+    #statusbar {
+      grid-area: status;
+      background: var(--bg-toolbar);
+      border-top: 1px solid var(--border);
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      color: var(--text-dim);
+      font-size: 11px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Error Overlay ──────────────────────────────────────────── */
+    #error {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(160, 30, 30, 0.95);
+      color: #fff;
+      padding: 24px 32px;
+      border-radius: 8px;
+      font-size: 14px;
+      max-width: 480px;
+      text-align: center;
+      z-index: 9999;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Toolbar ─────────────────────────────────────────────── -->
+  <div id="toolbar">
+    <span class="tool-logo">RENDR</span>
+
+    <span class="tool-label">Add</span>
+    <div class="tool-group">
+      <button id="btn-cube"     class="tbtn" title="Add Cube (1×1×1)">Cube</button>
+      <button id="btn-sphere"   class="tbtn" title="Add Sphere (r=0.5)">Sphere</button>
+      <button id="btn-cylinder" class="tbtn" title="Add Cylinder (r=0.5, h=1)">Cylinder</button>
+      <button id="btn-plane"    class="tbtn" title="Add Plane (2×2)">Plane</button>
+    </div>
+
+    <div class="tool-sep"></div>
+    <span class="tool-label">CSG</span>
+    <div class="tool-group">
+      <button id="btn-union"     class="tbtn csg" title="Union — merge two selected objects (select 2)">⊕ Union</button>
+      <button id="btn-subtract"  class="tbtn csg" title="Subtract B from A — remove second from first (select 2)">⊖ Subtract</button>
+      <button id="btn-intersect" class="tbtn csg" title="Intersect — keep only overlap (select 2)">⊗ Intersect</button>
+    </div>
+
+    <div class="tool-sep"></div>
+    <span class="tool-label">Hierarchy</span>
+    <div class="tool-group">
+      <button id="btn-parent"   class="tbtn" title="Parent first selected to second (Ctrl+click to multi-select)">Parent</button>
+      <button id="btn-unparent" class="tbtn" title="Remove selected from parent">Unparent</button>
+    </div>
+
+    <div class="tool-sep"></div>
+    <span class="tool-label">View</span>
+    <div class="tool-group">
+      <button id="btn-frame"     class="tbtn" title="Frame all objects (F)">Frame All</button>
+      <button id="btn-reset-cam" class="tbtn" title="Reset camera to default">Reset Cam</button>
+    </div>
+
+    <div class="tool-sep"></div>
+    <button id="btn-delete" class="tbtn danger" title="Delete selected (Del / Backspace)">✕ Delete</button>
+  </div>
+
+  <!-- ── Scene Outliner ──────────────────────────────────────── -->
+  <div id="outliner">
+    <div class="panel-header">Scene Outliner</div>
+    <div id="outliner-body"></div>
+  </div>
+
+  <!-- ── Viewport ────────────────────────────────────────────── -->
+  <div id="viewport-wrap">
+    <canvas id="viewport"></canvas>
+    <div id="viewport-hint">
+      LMB drag — Orbit &nbsp;|&nbsp; RMB drag — Pan &nbsp;|&nbsp; Scroll — Zoom &nbsp;|&nbsp; Click — Select &nbsp;|&nbsp; Ctrl+click — Multi-select
+    </div>
+  </div>
+
+  <!-- ── Properties Panel ────────────────────────────────────── -->
+  <div id="properties">
+    <div class="panel-header">Properties</div>
+    <div id="properties-body">
+      <div class="prop-empty">Nothing selected</div>
+    </div>
+  </div>
+
+  <!-- ── Status Bar ──────────────────────────────────────────── -->
+  <div id="statusbar">Ready</div>
+
+</div>
+
+<div id="error"></div>
+
+<script type="module" src="editor/main.ts"></script>
+</body>
+</html>
