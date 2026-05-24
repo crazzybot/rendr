@@ -1,7 +1,7 @@
 // CSG.ts — Constructive Solid Geometry via BSP trees.
 // Adapted from the algorithm by Evan Wallace (csg.js, MIT License).
-import { Vec3, Mat4 } from '../../src/index';
-import type { MeshData } from '../../src/index';
+import { Vec3, Mat4 } from '../math';
+import type { MeshData } from './Mesh';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -145,9 +145,9 @@ class Node {
     let f: Polygon[] = [], b: Polygon[] = [];
     for (const p of polygons) this.plane.splitPolygon(p, f, b, f, b);
     if (this.front) f = this.front.clipPolygons(f);
-    else             f = [];
+    // no front child → polygons are outside the solid, keep them
     if (this.back)  b = this.back.clipPolygons(b);
-    else             b = [];
+    else             b = []; // no back child → polygons are inside the solid, discard
     return [...f, ...b];
   }
 
@@ -230,6 +230,7 @@ function meshToPolygons(data: MeshData, worldMat?: Mat4): Polygon[] {
 function polygonsToMesh(polys: Polygon[]): MeshData {
   const positions: number[] = [];
   const normals:   number[] = [];
+  const uvs:       number[] = [];
   const indices:   number[] = [];
 
   for (const poly of polys) {
@@ -239,6 +240,7 @@ function polygonsToMesh(polys: Polygon[]): MeshData {
     for (const v of poly.vertices) {
       positions.push(v.pos.x, v.pos.y, v.pos.z);
       normals.push(v.normal.x, v.normal.y, v.normal.z);
+      uvs.push(0, 0);
     }
     for (let i = 1; i < n - 1; i++) {
       indices.push(base, base + i, base + i + 1);
@@ -249,6 +251,7 @@ function polygonsToMesh(polys: Polygon[]): MeshData {
   return {
     positions: new Float32Array(positions),
     normals:   new Float32Array(normals),
+    uvs:       new Float32Array(uvs),
     indices:   vertexCount < 65536
       ? new Uint16Array(indices)
       : new Uint32Array(indices),

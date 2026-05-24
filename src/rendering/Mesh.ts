@@ -83,8 +83,11 @@ export class Mesh {
     this.vertexBuffer.unmap();
 
     if (this.indices) {
+      // GPU buffers must be 4-byte aligned; Uint16 index arrays with an odd
+      // element count produce a 2-byte-misaligned size — pad up to next multiple of 4.
+      const indexByteSize = Math.ceil(this.indices.byteLength / 4) * 4;
       this.indexBuffer = device.createBuffer({
-        size: this.indices.byteLength,
+        size: indexByteSize,
         usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
         mappedAtCreation: true
       });
