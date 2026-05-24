@@ -122,6 +122,7 @@ export class Renderer {
 
     const meshRenderers = scene.findEntitiesWithComponent(MeshRenderer);
     for (const entity of meshRenderers) {
+      if (!entity.active) continue;
       const meshRenderer = entity.getComponent(MeshRenderer);
       if (meshRenderer && meshRenderer.enabled) {
         if (!meshRenderer.isInitialized()) {

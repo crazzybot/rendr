@@ -428,9 +428,15 @@ function enterMeshEditMode(nodeId: string) {
   meshEditSavedLayers = deepCopyLayers(node.csgLayers);
   meshEditSelectedLayerId = node.csgLayers[0]?.id ?? null;
 
+  // Hide every entity except the one being edited.
+  for (const [id, n] of nodes) {
+    if (id !== nodeId) n.entity.active = false;
+  }
+
   selectedIds.clear();
-  document.getElementById('scene-tools')!.style.display   = 'none';
+  document.getElementById('scene-tools')!.style.display    = 'none';
   document.getElementById('mesh-edit-tools')!.style.display = 'flex';
+  document.getElementById('outliner-header')!.classList.add('me-mode');
   refreshUI();
 }
 
@@ -445,13 +451,17 @@ function exitMeshEditMode(apply: boolean) {
     }
   }
 
+  // Restore all entities.
+  for (const n of nodes.values()) n.entity.active = true;
+
   editorMode = 'scene';
   meshEditTargetId = null;
   meshEditSelectedLayerId = null;
   meshEditSavedLayers = null;
 
-  document.getElementById('scene-tools')!.style.display   = 'flex';
+  document.getElementById('scene-tools')!.style.display    = 'flex';
   document.getElementById('mesh-edit-tools')!.style.display = 'none';
+  document.getElementById('outliner-header')!.classList.remove('me-mode');
   refreshUI();
 }
 
