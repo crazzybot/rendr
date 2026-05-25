@@ -23,13 +23,16 @@ export class Material {
   private materialBuffer: GPUBuffer | null = null;
   private lightBuffer: GPUBuffer | null = null;
 
-  constructor(shaderSource?: ShaderSource, properties?: MaterialProperties) {
+  public topology: GPUPrimitiveTopology;
+
+  constructor(shaderSource?: ShaderSource, properties?: MaterialProperties, topology: GPUPrimitiveTopology = 'triangle-list') {
     this.shader = new Shader(shaderSource || BasicShader);
     this.color = properties?.color || new Vec4(1, 1, 1, 1);
     this.ambient = properties?.ambient ?? 0.2;
     this.diffuse = properties?.diffuse ?? 0.8;
     this.specular = properties?.specular ?? 0.5;
     this.shininess = properties?.shininess ?? 32.0;
+    this.topology = topology;
   }
 
   createPipeline(
@@ -112,8 +115,8 @@ export class Material {
         targets: [{ format: format }]
       },
       primitive: {
-        topology: 'triangle-list',
-        cullMode: 'back'
+        topology: this.topology,
+        cullMode: this.topology === 'triangle-list' ? 'back' : 'none'
       },
       depthStencil: {
         depthWriteEnabled: true,

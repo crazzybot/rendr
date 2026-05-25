@@ -82,6 +82,7 @@
     .tbtn.me:hover { background: #2a1a08; border-color: var(--me-accent); color: #e8a84a; }
     .tbtn.me-ok    { background: #0f2d18; border-color: #2a6040; color: #5abf7a; }
     .tbtn.me-ok:hover { background: #143a20; border-color: #3a8060; }
+    .tbtn.active   { background: #1a3a28; border-color: #3abf6a; color: #3abf6a; }
 
     /* Mesh-edit toolbar is hidden until mode switches */
     #mesh-edit-tools { display: none; }
@@ -245,6 +246,8 @@
       </div>
       <div class="tool-sep"></div>
       <button id="btn-me-del-layer" class="tbtn danger" title="Delete selected layer (Del)">✕ Layer</button>
+      <div class="tool-sep"></div>
+      <button id="btn-me-wireframe" class="tbtn me" title="Toggle wireframe overlay">⬡ Wireframe</button>
       <div class="tool-sep"></div>
       <button id="btn-me-apply"  class="tbtn me-ok" title="Apply changes and return to scene (Esc)">✓ Apply</button>
       <button id="btn-me-cancel" class="tbtn danger" title="Discard changes and return to scene">✕ Cancel</button>
