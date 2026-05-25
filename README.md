@@ -6,10 +6,14 @@ A robust, modern 3D game framework built on WebGPU for creating high-performance
 
 - **Modern WebGPU Renderer**: High-performance graphics rendering using the latest WebGPU API
 - **Entity Component System**: Flexible architecture for game object management
+- **Fixed Timestep Simulation**: Deterministic `onFixedUpdate` loop for simulation/physics work
 - **Complete Math Library**: Vec3, Vec4, Mat4, and Quaternion implementations
 - **Camera System**: Perspective and orthographic projection support
 - **Built-in Geometries**: Cube, Sphere, Plane, and Cylinder primitives
 - **Material System**: Customizable shaders and materials with lighting support
+- **Physics Module (Early)**: `RigidBody` and arcade-style `CarPhysics` components
+- **Model Import**: OBJ loading via `MeshLoader`
+- **CSG Operations**: Union / subtract / intersect helpers for mesh workflows
 - **Input Management**: Comprehensive keyboard, mouse, and pointer lock support
 - **Resource Management**: Centralized asset management system
 - **TypeScript**: Full TypeScript support with type definitions
@@ -286,6 +290,7 @@ src/
 ├── math/           # Math utilities (Vec3, Vec4, Mat4, Quat)
 ├── rendering/      # Rendering system (Renderer, Mesh, Material, Shader)
 ├── components/     # Built-in components (Camera, MeshRenderer)
+├── physics/        # Physics components (RigidBody, CarPhysics)
 ├── input/          # Input handling (InputManager)
 └── resources/      # Resource management (ResourceManager)
 ```
@@ -336,13 +341,40 @@ The built files will be in the `dist/` directory.
 
 ## Examples
 
-Check the `example/` directory for more comprehensive examples:
+Check the `examples/` directory for more comprehensive examples:
 
 - Basic scene setup
 - Camera controls
 - Custom components
 - Material usage
 - Input handling
+- Racing prototype (`examples/racing.html`)
+- Scene editor prototype (`examples/editor.html`)
+
+## Implementation Status (May 2026)
+
+Detailed execution plan: [dev-docs/roadmap-prioritized-implementation-plan.md](dev-docs/roadmap-prioritized-implementation-plan.md)
+
+Implemented and usable now:
+
+- Core ECS (entities, components, transform hierarchy)
+- WebGPU renderer with directional-light shading
+- Fixed timestep engine loop (`fixedTimestep` + `onFixedUpdate`)
+- Physics foundation (`RigidBody`, arcade `CarPhysics`)
+- Racing prototype with keyboard controls, wheel animation, and follow camera logic
+- OBJ mesh loading (`MeshLoader.parseOBJ` / `MeshLoader.loadOBJ`)
+- CSG helpers (`csgUnion`, `csgSubtract`, `csgIntersect`)
+
+Not implemented yet (or only partially implemented):
+
+- Collision system (AABB/collider/response)
+- Texture/sampler pipeline integration
+- Gamepad input support
+- Audio manager
+- Point lights, shadows, and post-processing
+- Scene serialization
+- glTF loading
+- Profiling tools
 
 ## API Documentation
 
@@ -390,7 +422,7 @@ MIT License
 - [ ] Advanced lighting (point lights, spot lights, shadows)
 - [ ] Post-processing effects
 - [ ] Particle system
-- [ ] Physics integration
+- [x] Physics integration (fixed timestep + `RigidBody` + `CarPhysics`)
 - [ ] Animation system
 - [ ] Audio system
 - [ ] Scene serialization
