@@ -15,6 +15,14 @@ export class TextureLoader {
     }
 
     const blob = await response.blob();
+    return this.loadTextureFromBlob(blob, device, options);
+  }
+
+  static async loadTextureFromBlob(
+    blob: Blob,
+    device: GPUDevice,
+    options: TextureLoadOptions = {}
+  ): Promise<GPUTexture> {
     const bitmap = await createImageBitmap(blob, { imageOrientation: 'flipY' });
     const texture = this.createTextureFromBitmap(bitmap, device, options);
     bitmap.close();

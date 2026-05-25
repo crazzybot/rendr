@@ -4,6 +4,11 @@ import { Mesh } from './Mesh';
 import { Sampler } from './Sampler';
 import { TextureLoader } from './TextureLoader';
 
+const GLB_MAGIC = 0x46546c67;
+const GLB_VERSION_2 = 2;
+const GLB_CHUNK_TYPE_JSON = 0x4e4f534a;
+const GLB_CHUNK_TYPE_BIN = 0x004e4942;
+
 interface GltfBuffer {
   uri?: string;
   byteLength: number;
@@ -39,6 +44,13 @@ interface GltfMesh {
 
 interface GltfImage {
   uri?: string;
+  bufferView?: number;
+  mimeType?: string;
+}
+
+interface GltfTextureInfo {
+  index: number;
+  texCoord?: number;
 }
 
 interface GltfSampler {
@@ -55,12 +67,20 @@ interface GltfTexture {
 
 interface GltfPbrMetallicRoughness {
   baseColorFactor?: [number, number, number, number];
-  baseColorTexture?: { index: number };
+  baseColorTexture?: GltfTextureInfo;
+  metallicFactor?: number;
+  roughnessFactor?: number;
 }
 
 interface GltfMaterial {
   pbrMetallicRoughness?: GltfPbrMetallicRoughness;
   doubleSided?: boolean;
+  emissiveFactor?: [number, number, number];
+  emissiveTexture?: GltfTextureInfo;
+  normalTexture?: GltfTextureInfo;
+  occlusionTexture?: GltfTextureInfo;
+  alphaMode?: 'OPAQUE' | 'MASK' | 'BLEND';
+  alphaCutoff?: number;
 }
 
 interface GltfDocument {
@@ -93,11 +113,12 @@ export class GltfLoader {
       throw new Error(`Failed to load glTF: ${url}`);
     }
 
-    const gltf = (await response.json()) as GltfDocument;
+    const bytes = await response.arrayBuffer();
+    const { gltf, glbBinaryChunk } = this.parseContainer(url, bytes);
     const baseUrl = new URL('.', url).toString();
 
-    const buffers = await this.loadBuffers(gltf, baseUrl);
-    const textures = await this.loadTextures(gltf, baseUrl, device);
+    const buffers = await this.loadBuffers(gltf, baseUrl, glbBinaryChunk);
+    const textures = await this.loadTextures(gltf, baseUrl, buffers, device);
     const samplers = this.loadSamplers(gltf, device);
 
     const primitives: GltfPrimitiveResult[] = [];
@@ -118,11 +139,90 @@ export class GltfLoader {
     return { primitives, textures, samplers };
   }
 
-  private static async loadBuffers(gltf: GltfDocument, baseUrl: string): Promise<ArrayBuffer[]> {
+  private static parseContainer(
+    url: string,
+    bytes: ArrayBuffer
+  ): { gltf: GltfDocument; glbBinaryChunk: ArrayBuffer | null } {
+    if (this.isGlb(bytes)) {
+      return this.parseGlb(bytes);
+    }
+
+    const jsonText = new TextDecoder().decode(bytes);
+    try {
+      return { gltf: JSON.parse(jsonText) as GltfDocument, glbBinaryChunk: null };
+    } catch (error) {
+      throw new Error(`Failed to parse glTF JSON at ${url}: ${(error as Error).message}`);
+    }
+  }
+
+  private static isGlb(bytes: ArrayBuffer): boolean {
+    if (bytes.byteLength < 12) return false;
+    const view = new DataView(bytes);
+    return view.getUint32(0, true) === GLB_MAGIC;
+  }
+
+  private static parseGlb(
+    bytes: ArrayBuffer
+  ): { gltf: GltfDocument; glbBinaryChunk: ArrayBuffer | null } {
+    const view = new DataView(bytes);
+    const version = view.getUint32(4, true);
+    const totalLength = view.getUint32(8, true);
+
+    if (version !== GLB_VERSION_2) {
+      throw new Error(`Unsupported GLB version: ${version}`);
+    }
+    if (totalLength > bytes.byteLength) {
+      throw new Error('GLB declares a total length larger than the fetched payload');
+    }
+
+    let offset = 12;
+    let jsonChunk: GltfDocument | null = null;
+    let binaryChunk: ArrayBuffer | null = null;
+
+    while (offset + 8 <= totalLength) {
+      const chunkLength = view.getUint32(offset, true);
+      const chunkType = view.getUint32(offset + 4, true);
+      const chunkStart = offset + 8;
+      const chunkEnd = chunkStart + chunkLength;
+
+      if (chunkEnd > totalLength) {
+        throw new Error('GLB chunk exceeds declared file length');
+      }
+
+      if (chunkType === GLB_CHUNK_TYPE_JSON) {
+        const jsonBytes = new Uint8Array(bytes, chunkStart, chunkLength);
+        const jsonText = new TextDecoder().decode(jsonBytes).replace(/\u0000+$/g, '');
+        jsonChunk = JSON.parse(jsonText) as GltfDocument;
+      } else if (chunkType === GLB_CHUNK_TYPE_BIN) {
+        binaryChunk = bytes.slice(chunkStart, chunkEnd);
+      }
+
+      offset = chunkEnd;
+    }
+
+    if (!jsonChunk) {
+      throw new Error('GLB is missing required JSON chunk');
+    }
+
+    return { gltf: jsonChunk, glbBinaryChunk: binaryChunk };
+  }
+
+  private static async loadBuffers(
+    gltf: GltfDocument,
+    baseUrl: string,
+    glbBinaryChunk: ArrayBuffer | null
+  ): Promise<ArrayBuffer[]> {
     const buffers: ArrayBuffer[] = [];
-    for (const buffer of gltf.buffers ?? []) {
+    const gltfBuffers = gltf.buffers ?? [];
+
+    for (let i = 0; i < gltfBuffers.length; i++) {
+      const buffer = gltfBuffers[i];
       if (!buffer.uri) {
-        throw new Error('Only uri-based .gltf buffers are supported in this loader');
+        if (glbBinaryChunk && i === 0) {
+          buffers.push(glbBinaryChunk);
+          continue;
+        }
+        throw new Error(`Buffer ${i} has no uri and no GLB binary chunk is available`);
       }
       const resolved = this.resolveUri(buffer.uri, baseUrl);
       const response = await fetch(resolved);
@@ -137,18 +237,24 @@ export class GltfLoader {
   private static async loadTextures(
     gltf: GltfDocument,
     baseUrl: string,
+    buffers: ArrayBuffer[],
     device: GPUDevice
   ): Promise<GPUTexture[]> {
     const textures: GPUTexture[] = [];
     for (const image of gltf.images ?? []) {
-      if (!image.uri) {
-        throw new Error('Only uri-based glTF images are supported in this loader');
-      }
-      const resolved = this.resolveUri(image.uri, baseUrl);
       try {
-        textures.push(await TextureLoader.loadTexture(resolved, device));
+        if (image.uri) {
+          const resolved = this.resolveUri(image.uri, baseUrl);
+          textures.push(await TextureLoader.loadTexture(resolved, device));
+        } else if (image.bufferView !== undefined) {
+          const imageBuffer = this.readBufferViewBytes(gltf, buffers, image.bufferView);
+          const blob = new Blob([imageBuffer], { type: image.mimeType ?? 'application/octet-stream' });
+          textures.push(await TextureLoader.loadTextureFromBlob(blob, device));
+        } else {
+          throw new Error('glTF image has neither uri nor bufferView');
+        }
       } catch (error) {
-        console.warn(`Failed to decode glTF image at ${resolved}. Using fallback texture.`, error);
+        console.warn('Failed to decode glTF image. Using fallback texture.', error);
         textures.push(TextureLoader.createSolidColorTexture(device, [255, 0, 255, 255]));
       }
     }
@@ -224,15 +330,41 @@ export class GltfLoader {
     const srcMaterial = gltf.materials[primitive.material];
     const pbr = srcMaterial.pbrMetallicRoughness;
     const baseColor = pbr?.baseColorFactor ?? [1, 1, 1, 1];
+    const emissive = srcMaterial.emissiveFactor ?? [0, 0, 0];
+    const metallic = this.clamp01(pbr?.metallicFactor ?? 1);
+    const roughness = this.clamp01(pbr?.roughnessFactor ?? 1);
+
+    const color = new Vec4(
+      this.clamp01(baseColor[0] + emissive[0]),
+      this.clamp01(baseColor[1] + emissive[1]),
+      this.clamp01(baseColor[2] + emissive[2]),
+      baseColor[3]
+    );
+
+    // Approximate PBR terms into the current Blinn/Phong material model.
+    const ambient = this.clamp(0.08 + roughness * 0.28, 0.05, 0.7);
+    const diffuse = this.clamp(1.0 - metallic * 0.55, 0.1, 1.0);
+    const specular = this.clamp(0.04 + (1.0 - roughness) * (0.25 + metallic * 0.65), 0.02, 1.0);
+    const shininess = this.clamp(2 + Math.pow(1 - roughness, 2) * 126, 2, 128);
+
+    const alphaMode = srcMaterial.alphaMode ?? 'OPAQUE';
+    const alphaCutoff = srcMaterial.alphaCutoff ?? 0.5;
+    if (alphaMode === 'MASK' && color.w < alphaCutoff) {
+      color.w = 0;
+    }
 
     const material = new Material(undefined, {
-      color: new Vec4(baseColor[0], baseColor[1], baseColor[2], baseColor[3]),
+      color,
+      ambient,
+      diffuse,
+      specular,
+      shininess,
       cullMode: srcMaterial.doubleSided ? 'none' : 'back',
     });
 
-    const baseColorTextureIndex = pbr?.baseColorTexture?.index;
-    if (baseColorTextureIndex !== undefined && gltf.textures?.[baseColorTextureIndex]) {
-      const textureDef = gltf.textures[baseColorTextureIndex];
+    const primaryTextureIndex = pbr?.baseColorTexture?.index ?? srcMaterial.emissiveTexture?.index;
+    if (primaryTextureIndex !== undefined && gltf.textures?.[primaryTextureIndex]) {
+      const textureDef = gltf.textures[primaryTextureIndex];
       const texture =
         textureDef.source !== undefined ? textures[textureDef.source] ?? null : null;
       const sampler =
@@ -243,6 +375,26 @@ export class GltfLoader {
     }
 
     return material;
+  }
+
+  private static readBufferViewBytes(
+    gltf: GltfDocument,
+    buffers: ArrayBuffer[],
+    bufferViewIndex: number
+  ): ArrayBuffer {
+    const bufferView = gltf.bufferViews?.[bufferViewIndex];
+    if (!bufferView) {
+      throw new Error(`Missing bufferView at index ${bufferViewIndex}`);
+    }
+
+    const buffer = buffers[bufferView.buffer];
+    if (!buffer) {
+      throw new Error(`Missing buffer ${bufferView.buffer} for bufferView ${bufferViewIndex}`);
+    }
+
+    const start = bufferView.byteOffset ?? 0;
+    const end = start + bufferView.byteLength;
+    return buffer.slice(start, end);
   }
 
   private static readAccessorAsFloat32(
@@ -459,5 +611,13 @@ export class GltfLoader {
       default:
         return value;
     }
+  }
+
+  private static clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private static clamp01(value: number): number {
+    return this.clamp(value, 0, 1);
   }
 }
