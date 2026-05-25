@@ -4,4 +4,7 @@ export { Geometry } from './Geometry';
 export { Material, type MaterialProperties } from './Material';
 export { Shader, type ShaderSource, BasicShader, UnlitShader } from './Shader';
 export { MeshLoader } from './MeshLoader';
+export { TextureLoader, type TextureLoadOptions } from './TextureLoader';
+export { Sampler } from './Sampler';
+export { GltfLoader, type GltfLoadResult, type GltfPrimitiveResult } from './GltfLoader';
 export { csgUnion, csgSubtract, csgIntersect } from './CSG';

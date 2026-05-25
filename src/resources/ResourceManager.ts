@@ -8,6 +8,8 @@ export class ResourceManager {
   private meshes: Map<string, Mesh> = new Map();
   private materials: Map<string, Material> = new Map();
   private shaders: Map<string, Shader> = new Map();
+  private textures: Map<string, GPUTexture> = new Map();
+  private samplers: Map<string, GPUSampler> = new Map();
 
   private constructor() {}
 
@@ -81,6 +83,41 @@ export class ResourceManager {
     }
   }
 
+  registerTexture(name: string, texture: GPUTexture): void {
+    if (this.textures.has(name)) {
+      console.warn(`Texture ${name} already exists, overwriting`);
+      this.textures.get(name)?.destroy();
+    }
+    this.textures.set(name, texture);
+  }
+
+  getTexture(name: string): GPUTexture | null {
+    return this.textures.get(name) || null;
+  }
+
+  unregisterTexture(name: string): void {
+    const texture = this.textures.get(name);
+    if (texture) {
+      texture.destroy();
+      this.textures.delete(name);
+    }
+  }
+
+  registerSampler(name: string, sampler: GPUSampler): void {
+    if (this.samplers.has(name)) {
+      console.warn(`Sampler ${name} already exists, overwriting`);
+    }
+    this.samplers.set(name, sampler);
+  }
+
+  getSampler(name: string): GPUSampler | null {
+    return this.samplers.get(name) || null;
+  }
+
+  unregisterSampler(name: string): void {
+    this.samplers.delete(name);
+  }
+
   clear(): void {
     for (const mesh of this.meshes.values()) {
       mesh.destroy();
@@ -96,5 +133,12 @@ export class ResourceManager {
       shader.destroy();
     }
     this.shaders.clear();
+
+    for (const texture of this.textures.values()) {
+      texture.destroy();
+    }
+    this.textures.clear();
+
+    this.samplers.clear();
   }
 }

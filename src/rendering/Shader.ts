@@ -96,6 +96,8 @@ export const BasicShader: ShaderSource = {
 
     @group(0) @binding(1) var<uniform> material: MaterialUniforms;
     @group(0) @binding(2) var<uniform> light: LightUniforms;
+    @group(0) @binding(3) var diffuseTexture: texture_2d<f32>;
+    @group(0) @binding(4) var diffuseSampler: sampler;
 
     struct FragmentInput {
       @location(0) normal: vec3<f32>,
@@ -105,15 +107,17 @@ export const BasicShader: ShaderSource = {
 
     @fragment
     fn fragmentMain(input: FragmentInput) -> @location(0) vec4<f32> {
+      let sampled = textureSample(diffuseTexture, diffuseSampler, input.uv);
+      let baseColor = material.color * sampled;
       let normal = normalize(input.normal);
       let lightDir = normalize(-light.direction);
 
       // Ambient
-      let ambient = material.ambient * material.color.rgb * light.color.rgb;
+      let ambient = material.ambient * baseColor.rgb * light.color.rgb;
 
       // Diffuse
       let diff = max(dot(normal, lightDir), 0.0);
-      let diffuse = material.diffuse * diff * material.color.rgb * light.color.rgb;
+      let diffuse = material.diffuse * diff * baseColor.rgb * light.color.rgb;
 
       // Specular
       let viewDir = normalize(light.cameraPosition - input.worldPosition);
@@ -122,7 +126,7 @@ export const BasicShader: ShaderSource = {
       let specular = material.specular * spec * light.color.rgb;
 
       let finalColor = ambient + diffuse + specular;
-      return vec4<f32>(finalColor, material.color.a);
+      return vec4<f32>(finalColor, baseColor.a);
     }
   `
 };
@@ -168,10 +172,12 @@ export const UnlitShader: ShaderSource = {
     };
 
     @group(0) @binding(1) var<uniform> material: MaterialUniforms;
+    @group(0) @binding(3) var diffuseTexture: texture_2d<f32>;
+    @group(0) @binding(4) var diffuseSampler: sampler;
 
     @fragment
     fn fragmentMain(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
-      return material.color;
+      return material.color * textureSample(diffuseTexture, diffuseSampler, uv);
     }
   `
 };

@@ -1,4 +1,6 @@
 import { Shader, ShaderSource, BasicShader } from './Shader';
+import { Sampler } from './Sampler';
+import { TextureLoader } from './TextureLoader';
 import { Vec4 } from '../math';
 
 export interface MaterialProperties {
@@ -7,15 +9,22 @@ export interface MaterialProperties {
   diffuse?: number;
   specular?: number;
   shininess?: number;
+  diffuseTexture?: GPUTexture | null;
+  sampler?: GPUSampler | null;
 }
 
 export class Material {
+  private static readonly defaultWhiteTextureByDevice = new WeakMap<GPUDevice, GPUTexture>();
+  private static readonly defaultSamplerByDevice = new WeakMap<GPUDevice, GPUSampler>();
+
   public shader: Shader;
   public color: Vec4;
   public ambient: number;
   public diffuse: number;
   public specular: number;
   public shininess: number;
+  public diffuseTexture: GPUTexture | null;
+  public sampler: GPUSampler | null;
 
   private pipeline: GPURenderPipeline | null = null;
   private bindGroup: GPUBindGroup | null = null;
@@ -32,6 +41,8 @@ export class Material {
     this.diffuse = properties?.diffuse ?? 0.8;
     this.specular = properties?.specular ?? 0.5;
     this.shininess = properties?.shininess ?? 32.0;
+    this.diffuseTexture = properties?.diffuseTexture ?? null;
+    this.sampler = properties?.sampler ?? null;
     this.topology = topology;
   }
 
@@ -58,6 +69,16 @@ export class Material {
           binding: 2,
           visibility: GPUShaderStage.FRAGMENT,
           buffer: { type: 'uniform' }
+        },
+        {
+          binding: 3,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: { sampleType: 'float' }
+        },
+        {
+          binding: 4,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: { type: 'filtering' }
         }
       ]
     });
@@ -98,6 +119,14 @@ export class Material {
         {
           binding: 2,
           resource: { buffer: this.lightBuffer }
+        },
+        {
+          binding: 3,
+          resource: this.getOrCreateTextureView(device)
+        },
+        {
+          binding: 4,
+          resource: this.getOrCreateSampler(device)
         }
       ]
     });
@@ -176,6 +205,38 @@ export class Material {
     this.color = color;
   }
 
+  setDiffuseTexture(texture: GPUTexture | null, sampler: GPUSampler | null = null): void {
+    this.diffuseTexture = texture;
+    if (sampler) {
+      this.sampler = sampler;
+    }
+  }
+
+  private getOrCreateTextureView(device: GPUDevice): GPUTextureView {
+    const texture = this.diffuseTexture ?? Material.getDefaultWhiteTexture(device);
+    return texture.createView();
+  }
+
+  private getOrCreateSampler(device: GPUDevice): GPUSampler {
+    if (this.sampler) return this.sampler;
+
+    let fallback = Material.defaultSamplerByDevice.get(device);
+    if (!fallback) {
+      fallback = Sampler.createLinearRepeat(device);
+      Material.defaultSamplerByDevice.set(device, fallback);
+    }
+    return fallback;
+  }
+
+  private static getDefaultWhiteTexture(device: GPUDevice): GPUTexture {
+    let texture = this.defaultWhiteTextureByDevice.get(device);
+    if (!texture) {
+      texture = TextureLoader.createSolidColorTexture(device);
+      this.defaultWhiteTextureByDevice.set(device, texture);
+    }
+    return texture;
+  }
+
   getPipeline(): GPURenderPipeline | null {
     return this.pipeline;
   }
@@ -201,6 +262,9 @@ export class Material {
       this.lightBuffer.destroy();
       this.lightBuffer = null;
     }
+
+    this.diffuseTexture = null;
+    this.sampler = null;
 
     this.pipeline = null;
     this.bindGroup = null;

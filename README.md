@@ -364,16 +364,18 @@ Implemented and usable now:
 - Racing prototype with keyboard controls, wheel animation, and follow camera logic
 - OBJ mesh loading (`MeshLoader.parseOBJ` / `MeshLoader.loadOBJ`)
 - CSG helpers (`csgUnion`, `csgSubtract`, `csgIntersect`)
+- Texture pipeline foundation (`TextureLoader`, `Sampler`, texture-aware material/shader bindings)
+- Baseline glTF loader (`GltfLoader`) for uri-based `.gltf` assets
 
 Not implemented yet (or only partially implemented):
 
 - Collision system (AABB/collider/response)
-- Texture/sampler pipeline integration
+- Texture/sampler pipeline integration (partially implemented; example integration pending)
 - Gamepad input support
 - Audio manager
 - Point lights, shadows, and post-processing
 - Scene serialization
-- glTF loading
+- glTF loading (partially implemented; broader spec support pending)
 - Profiling tools
 
 ## API Documentation

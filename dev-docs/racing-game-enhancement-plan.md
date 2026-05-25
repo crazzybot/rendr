@@ -134,11 +134,16 @@ Pending (requires Phase 4 raycasts):
 
 ---
 
-### Phase 6 — Follow Camera
+### Phase 6 — Follow Camera ⚡ Partially Complete
 
 **Why:** The free-fly camera is for development. A racing game needs a camera that tracks the car.
 
-**New file: `src/components/CameraFollow.ts`** (Component, attaches to the Camera entity)
+Current implementation status:
+
+- ✅ Example-scoped follow camera exists in `examples/racing/main.ts` (`FollowCamera` component)
+- ⏳ Reusable engine component `src/components/CameraFollow.ts` is still pending
+
+**Planned reusable file: `src/components/CameraFollow.ts`** (Component, attaches to the Camera entity)
 
 ```
 target: Entity          // the car
@@ -151,6 +156,8 @@ lookAheadDistance: number  // offset camera aim point forward along car velocity
 Per-frame: compute desired position = `target.worldPosition + target.worldRotation * offset`, lerp current position toward desired, then `lookAt(target.worldPosition + velocity * lookAheadDistance)`.
 
 **Deliverable:** Camera smoothly follows the car through corners.
+- ✅ Achieved in racing example
+- ⏳ Not yet extracted into reusable engine component
 
 ---
 
@@ -187,18 +194,25 @@ Thin wrapper around the Web Audio API `AudioContext`:
 
 ---
 
-### Phase 9 — HTML HUD
+### Phase 9 — HTML HUD ⚡ Partially Complete
 
 **Why:** Speedometer, lap counter, and position are essential race feedback.
 
 **Approach:** HTML/CSS overlay (not WebGPU 2D rendering — that is far more complex and not justified here).
 
-**New file: `src/ui/HUD.ts`:**
+Current implementation status:
+
+- ✅ Speed HUD exists in `examples/racing.html` + `examples/racing/main.ts`
+- ⏳ Reusable `src/ui/HUD.ts` module is still pending
+
+**Planned reusable file: `src/ui/HUD.ts`:**
 - Creates and manages a `div` overlay over the canvas.
 - Exposes typed update methods: `setSpeed(kmh)`, `setLap(current, total)`, `setPosition(n)`, `setTimer(seconds)`.
 - Uses CSS Grid for layout; themed with minimal styling.
 
 **Deliverable:** On-screen racing HUD updating in real time.
+- ✅ Speed readout currently works in the racing example
+- ⏳ General-purpose HUD API is still pending
 
 ---
 
@@ -255,13 +269,13 @@ Phase 2  — Fixed timestep   ✅ Complete
 Phase 3  — Car physics      ⚡ In Progress (flat ground done; raycasts pending)
 Phase 4  — Collision detection    (2–3 days)
 Phase 5  — Texture mapping        (2 days)
-Phase 6  — Follow camera          (1 day)
+Phase 6  — Follow camera    ⚡ Partial (implemented in example only)
 ────────────────────────────────────────────
-           Drivable game           ~2 weeks
+           Drivable prototype      ✅ Available now
 
 Phase 7  — Gamepad input          (1 day)
 Phase 8  — Audio                  (1–2 days)
-Phase 9  — HUD                    (1 day)
+Phase 9  — HUD              ⚡ Partial (speed HUD in example)
 Phase 10 — Point lights           (1 day)
 Phase 11 — Skybox                 (2 days)
 ────────────────────────────────────────────
