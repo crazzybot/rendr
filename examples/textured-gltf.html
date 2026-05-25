@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rendr - Textured glTF Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #1f2233 0%, #090b12 60%, #05060a 100%);
+      color: #eef1ff;
+      overflow: hidden;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    #canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    #panel {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(8, 11, 20, 0.78);
+      border: 1px solid rgba(184, 202, 255, 0.2);
+      backdrop-filter: blur(4px);
+      line-height: 1.5;
+      max-width: 420px;
+      font-size: 13px;
+    }
+
+    #panel h1 {
+      font-size: 15px;
+      margin-bottom: 5px;
+      color: #dbe7ff;
+      letter-spacing: 0.3px;
+    }
+
+    #status {
+      margin-top: 6px;
+      color: #a9ffd3;
+      font-weight: 600;
+    }
+
+    #error {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 18px 22px;
+      border-radius: 10px;
+      background: rgba(180, 24, 44, 0.9);
+      color: #fff;
+      max-width: 560px;
+      text-align: center;
+      display: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+
+  <div id="panel">
+    <h1>Textured glTF Demo</h1>
+    <div>Dedicated Phase 1 sample: loads a textured glTF using <strong>GltfLoader</strong>.</div>
+    <div id="status">Loading model...</div>
+  </div>
+
+  <div id="error"></div>
+
+  <script type="module" src="textured-gltf/main.ts"></script>
+</body>
+
+</html>

@@ -26,10 +26,17 @@ export class TextureLoader {
     device: GPUDevice,
     options: TextureLoadOptions = {}
   ): GPUTexture {
+    // copyExternalImageToTexture requires destination textures to include
+    // COPY_DST and RENDER_ATTACHMENT usage. Keep TEXTURE_BINDING for sampling.
+    const requiredUsage =
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT;
+
     const texture = device.createTexture({
       size: { width: bitmap.width, height: bitmap.height, depthOrArrayLayers: 1 },
       format: options.format ?? 'rgba8unorm',
-      usage: options.usage ?? (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST),
+      usage: (options.usage ?? 0) | requiredUsage,
     });
 
     device.queue.copyExternalImageToTexture(

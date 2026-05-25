@@ -60,6 +60,7 @@ interface GltfPbrMetallicRoughness {
 
 interface GltfMaterial {
   pbrMetallicRoughness?: GltfPbrMetallicRoughness;
+  doubleSided?: boolean;
 }
 
 interface GltfDocument {
@@ -123,7 +124,7 @@ export class GltfLoader {
       if (!buffer.uri) {
         throw new Error('Only uri-based .gltf buffers are supported in this loader');
       }
-      const resolved = new URL(buffer.uri, baseUrl).toString();
+      const resolved = this.resolveUri(buffer.uri, baseUrl);
       const response = await fetch(resolved);
       if (!response.ok) {
         throw new Error(`Failed to load glTF buffer: ${resolved}`);
@@ -143,10 +144,22 @@ export class GltfLoader {
       if (!image.uri) {
         throw new Error('Only uri-based glTF images are supported in this loader');
       }
-      const resolved = new URL(image.uri, baseUrl).toString();
-      textures.push(await TextureLoader.loadTexture(resolved, device));
+      const resolved = this.resolveUri(image.uri, baseUrl);
+      try {
+        textures.push(await TextureLoader.loadTexture(resolved, device));
+      } catch (error) {
+        console.warn(`Failed to decode glTF image at ${resolved}. Using fallback texture.`, error);
+        textures.push(TextureLoader.createSolidColorTexture(device, [255, 0, 255, 255]));
+      }
     }
     return textures;
+  }
+
+  private static resolveUri(uri: string, baseUrl: string): string {
+    if (uri.startsWith('data:') || uri.startsWith('blob:')) {
+      return uri;
+    }
+    return new URL(uri, baseUrl).toString();
   }
 
   private static loadSamplers(gltf: GltfDocument, device: GPUDevice): GPUSampler[] {
@@ -214,6 +227,7 @@ export class GltfLoader {
 
     const material = new Material(undefined, {
       color: new Vec4(baseColor[0], baseColor[1], baseColor[2], baseColor[3]),
+      cullMode: srcMaterial.doubleSided ? 'none' : 'back',
     });
 
     const baseColorTextureIndex = pbr?.baseColorTexture?.index;

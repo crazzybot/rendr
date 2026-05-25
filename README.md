@@ -350,6 +350,7 @@ Check the `examples/` directory for more comprehensive examples:
 - Input handling
 - Racing prototype (`examples/racing.html`)
 - Scene editor prototype (`examples/editor.html`)
+- Textured glTF prototype (`examples/textured-gltf.html`)
 
 ## Implementation Status (May 2026)
 
@@ -370,12 +371,12 @@ Implemented and usable now:
 Not implemented yet (or only partially implemented):
 
 - Collision system (AABB/collider/response)
-- Texture/sampler pipeline integration (partially implemented; example integration pending)
+- Texture/sampler pipeline integration (implemented; advanced material maps pending)
 - Gamepad input support
 - Audio manager
 - Point lights, shadows, and post-processing
 - Scene serialization
-- glTF loading (partially implemented; broader spec support pending)
+- glTF loading (baseline implemented; broader spec support pending)
 - Profiling tools
 
 ## API Documentation

@@ -11,6 +11,7 @@ export interface MaterialProperties {
   shininess?: number;
   diffuseTexture?: GPUTexture | null;
   sampler?: GPUSampler | null;
+  cullMode?: GPUCullMode;
 }
 
 export class Material {
@@ -25,6 +26,7 @@ export class Material {
   public shininess: number;
   public diffuseTexture: GPUTexture | null;
   public sampler: GPUSampler | null;
+  public cullMode: GPUCullMode;
 
   private pipeline: GPURenderPipeline | null = null;
   private bindGroup: GPUBindGroup | null = null;
@@ -43,6 +45,7 @@ export class Material {
     this.shininess = properties?.shininess ?? 32.0;
     this.diffuseTexture = properties?.diffuseTexture ?? null;
     this.sampler = properties?.sampler ?? null;
+    this.cullMode = properties?.cullMode ?? 'back';
     this.topology = topology;
   }
 
@@ -145,7 +148,7 @@ export class Material {
       },
       primitive: {
         topology: this.topology,
-        cullMode: this.topology === 'triangle-list' ? 'back' : 'none'
+        cullMode: this.topology === 'triangle-list' ? this.cullMode : 'none'
       },
       depthStencil: {
         depthWriteEnabled: true,
